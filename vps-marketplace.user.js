@@ -253,6 +253,15 @@
       }
 
       if (typeof document !== 'undefined') {
+        const isVisible = (el) => el && el.style && el.style.display !== 'none' && !el.closest('[style*="display: none"]');
+        const isvoroView = document.getElementById('view-isvoro');
+        const panstarView = document.getElementById('view-panstar');
+        const akileView = document.getElementById('view-akile');
+
+        if (isVisible(isvoroView)) return 'isvoro';
+        if (isVisible(panstarView)) return 'panstar';
+        if (isVisible(akileView)) return 'akile';
+
         if (document.querySelector('article[data-marketplace-listing-card]')) return 'panstar';
         if (document.querySelector('.server-manage-card')) return 'akile';
         if (
@@ -266,12 +275,25 @@
     return host.indexOf('panstar') !== -1 ? 'panstar' : (host.indexOf('isvoro') !== -1 ? 'isvoro' : 'akile');
   }
 
-  const SITE = (() => {
+  let currentSiteName = detectSite();
+  let SITE = SITES[currentSiteName] || SITES.akile;
+  SITE.name = currentSiteName;
+
+  function refreshSite() {
     const name = detectSite();
-    const cfg = SITES[name] || SITES.akile;
-    cfg.name = name;
-    return cfg;
-  })();
+    if (name !== currentSiteName || !SITE) {
+      currentSiteName = name;
+      SITE = SITES[name] || SITES.akile;
+      SITE.name = name;
+      if (typeof document !== 'undefined' && document.documentElement) {
+        document.documentElement.classList.remove('xrv-akile', 'xrv-panstar', 'xrv-isvoro');
+        document.documentElement.classList.add('xrv-' + name);
+        const oldHud = document.querySelector('.xrv-hud');
+        if (oldHud) oldHud.remove();
+      }
+    }
+    return SITE;
+  }
 
   // 语言——支持中英自动检测
   function isZh() {
@@ -885,15 +907,49 @@
     const amount = parseFloat(m[1].replace(/,/g, ''));
     if (Number.isNaN(amount)) return null;
     const cycleToken = (m[2] || '').trim().toLowerCase();
-    const isYear = /年|year|yr|y/i.test(cycleToken);
-    const cycle = isYear ? 'year' : 'month';
-    const cycleDays = isYear ? 365 : 30;
-    const monthlyRenewalCost = isYear ? (amount / 12) : amount;
+    const isYear = /年|year|yr|y/i.test(cycleToken) && !/半年|half/i.test(cycleToken);
+    const isHalfYear = /半年|half|6\s*(?:month|mo|月)/i.test(cycleToken);
+    const isQuarter = /季|quarter|qtr|3\s*(?:month|mo|月)/i.test(cycleToken);
+    const isWeek = /周|week|wk/i.test(cycleToken);
+    const isDay = /天|日|day/i.test(cycleToken);
+
+    let cycle = 'month';
+    let cycleDays = 30;
+    let monthlyRenewalCost = amount;
+    let unit = isZh() ? '月' : 'mo';
+
+    if (isYear) {
+      cycle = 'year';
+      cycleDays = 365;
+      monthlyRenewalCost = amount / 12;
+      unit = isZh() ? '年' : 'yr';
+    } else if (isHalfYear) {
+      cycle = 'halfYear';
+      cycleDays = 180;
+      monthlyRenewalCost = amount / 6;
+      unit = isZh() ? '半年' : '6mo';
+    } else if (isQuarter) {
+      cycle = 'quarter';
+      cycleDays = 90;
+      monthlyRenewalCost = amount / 3;
+      unit = isZh() ? '季' : 'qtr';
+    } else if (isWeek) {
+      cycle = 'week';
+      cycleDays = 7;
+      monthlyRenewalCost = (amount / 7) * 30;
+      unit = isZh() ? '周' : 'wk';
+    } else if (isDay) {
+      cycle = 'day';
+      cycleDays = 1;
+      monthlyRenewalCost = amount * 30;
+      unit = isZh() ? '日' : 'day';
+    }
+
     return {
       price: amount,
       cycle,
       cycleDays,
-      unit: isYear ? (isZh() ? '年' : 'yr') : (isZh() ? '月' : 'mo'),
+      unit,
       monthlyRenewalCost: Math.round(monthlyRenewalCost * 100) / 100,
       currency: currencySymbol(text),
     };
@@ -1915,12 +1971,15 @@
   }
 
   function handleRouteChange() {
+    refreshSite();
     const isMarket = isMarketplaceRoute();
     if (isMarket) {
       if (!lifecycle.active) {
         enterMarketplace();
       } else {
+        ensureSortBar();
         scheduleScan();
+        scheduleSort();
       }
     } else {
       if (lifecycle.active) {
@@ -1970,6 +2029,7 @@
   const exportedAPI = {
     SITES,
     detectSite,
+    refreshSite,
     isMarketplaceRoute,
     getSortAnchor,
     IP_PATTERNS,

@@ -19,7 +19,7 @@ const fs = require('fs');
 const path = require('path');
 
 console.log('================================================================');
-console.log('🧪 开始执行 Panstar & Akile 交易所工具 v0.4.2 全量回归测试套件');
+console.log('🧪 开始执行 VPS 交易所助手 v0.5.0 三站点全量回归测试套件 (Panstar / Akile / Isvoro)');
 console.log('================================================================\n');
 
 // 1. 读取源码并提取被测核心逻辑
@@ -84,15 +84,49 @@ function parseRenewalPrice(text) {
   const amount = parseFloat(m[1].replace(/,/g, ''));
   if (Number.isNaN(amount)) return null;
   const cycleToken = (m[2] || '').trim().toLowerCase();
-  const isYear = /年|year|yr|y/i.test(cycleToken);
-  const cycle = isYear ? 'year' : 'month';
-  const cycleDays = isYear ? 365 : 30;
-  const monthlyRenewalCost = isYear ? (amount / 12) : amount;
+  const isYear = /年|year|yr|y/i.test(cycleToken) && !/半年|half/i.test(cycleToken);
+  const isHalfYear = /半年|half|6\s*(?:month|mo|月)/i.test(cycleToken);
+  const isQuarter = /季|quarter|qtr|3\s*(?:month|mo|月)/i.test(cycleToken);
+  const isWeek = /周|week|wk/i.test(cycleToken);
+  const isDay = /天|日|day/i.test(cycleToken);
+
+  let cycle = 'month';
+  let cycleDays = 30;
+  let monthlyRenewalCost = amount;
+  let unit = '月';
+
+  if (isYear) {
+    cycle = 'year';
+    cycleDays = 365;
+    monthlyRenewalCost = amount / 12;
+    unit = '年';
+  } else if (isHalfYear) {
+    cycle = 'halfYear';
+    cycleDays = 180;
+    monthlyRenewalCost = amount / 6;
+    unit = '半年';
+  } else if (isQuarter) {
+    cycle = 'quarter';
+    cycleDays = 90;
+    monthlyRenewalCost = amount / 3;
+    unit = '季';
+  } else if (isWeek) {
+    cycle = 'week';
+    cycleDays = 7;
+    monthlyRenewalCost = (amount / 7) * 30;
+    unit = '周';
+  } else if (isDay) {
+    cycle = 'day';
+    cycleDays = 1;
+    monthlyRenewalCost = amount * 30;
+    unit = '日';
+  }
+
   return {
     price: amount,
     cycle,
     cycleDays,
-    unit: isYear ? '年' : '月',
+    unit,
     monthlyRenewalCost: Math.round(monthlyRenewalCost * 100) / 100,
     currency: currencySymbol(text),
   };
@@ -250,6 +284,19 @@ it('源码中必须包含周期分类筛选器 (all / month / year)', () => {
   assert.strictEqual(source.includes('data-cycle="year"'), true, 'HUD 中应包含年付分类选项');
 });
 
+it('源码中必须包含 SITES.isvoro 适配器与 Shadcn-Vue 规范选择器', () => {
+  assert.strictEqual(source.includes('isvoro:'), true, '必须包含 SITES.isvoro 配置');
+  assert.strictEqual(source.includes('priceSelector:'), true, '必须配置 priceSelector');
+  assert.strictEqual(source.includes('sortUnitOf(card)'), true, '必须配置 sortUnitOf');
+  assert.strictEqual(source.includes('findField(card, key)'), true, '必须配置 findField');
+});
+
+it('源码中必须包含针对 Isvoro 路由判定与域名匹配支持', () => {
+  assert.ok(source.includes("path.startsWith('/marketplace')"), '必须支持 /marketplace 路由');
+  assert.ok(source.includes('isvoro.com'), '脚本元数据中必须包含 isvoro.com 匹配规则');
+  assert.ok(source.includes("host.indexOf('isvoro')"), '环境或路由探测必须支持 isvoro');
+});
+
 // ─── 第二部分：工具函数单元与健壮性测试 ───
 console.log('\n📌 阶段 2：数据提取、周期与流量健壮性测试');
 
@@ -272,6 +319,23 @@ it('parseRenewalPrice 能够精确解析年付与月付，并计算归一化折�
   const y3 = parseRenewalPrice('$12.00 / yr');
   assert.strictEqual(y3.cycle, 'year');
   assert.strictEqual(y3.monthlyRenewalCost, 1.00);
+});
+
+it('parseRenewalPrice 能够兼容季付、半年付、周付等多周期计费规格并归一化折合月付成本', () => {
+  const q = parseRenewalPrice('¥135.00/季');
+  assert.strictEqual(q.cycle, 'quarter');
+  assert.strictEqual(q.price, 135);
+  assert.strictEqual(q.monthlyRenewalCost, 45);
+
+  const h = parseRenewalPrice('¥210.00/半年');
+  assert.strictEqual(h.cycle, 'halfYear');
+  assert.strictEqual(h.price, 210);
+  assert.strictEqual(h.monthlyRenewalCost, 35);
+
+  const w = parseRenewalPrice('¥14.00/周');
+  assert.strictEqual(w.cycle, 'week');
+  assert.strictEqual(w.price, 14);
+  assert.strictEqual(w.monthlyRenewalCost, 60);
 });
 
 it('parseExpiry 兼容横杠、斜杠、点号与中文年月日等多形态日期格式', () => {
@@ -767,9 +831,12 @@ console.log('\n📌 阶段 5：本地仿真调试壳 mock-marketplace.html 审�
 const mockHtmlPath = path.join(__dirname, 'mock-marketplace.html');
 const mockHtml = fs.readFileSync(mockHtmlPath, 'utf8');
 
-it('mock-marketplace.html 中包含两套平台仿真视图', () => {
+it('mock-marketplace.html 中包含三套平台仿真视图 (Akile / Panstar / Isvoro)', () => {
   assert.ok(mockHtml.includes('id="view-akile"'), '必须包含 Akile 仿真视图');
   assert.ok(mockHtml.includes('id="view-panstar"'), '必须包含 Panstar 仿真视图');
+  assert.ok(mockHtml.includes('id="view-isvoro"'), '必须包含 Isvoro 仿真视图');
+  assert.ok(mockHtml.includes('id="btn-isvoro"'), '必须包含 Isvoro 视图切换按钮');
+  assert.ok(mockHtml.includes('HK-BGP-Standard-01'), '必须包含 Isvoro 真实卡片样本');
 });
 
 it('mock-marketplace.html 包含尾部 load-more 组件并受置底防守保护', () => {
@@ -1214,6 +1281,25 @@ class MiniDOMNode {
     this._textContent = '';
   }
 
+  get nextElementSibling() {
+    if (!this.parentElement) return null;
+    const siblings = this.parentElement.children;
+    const idx = siblings.indexOf(this);
+    if (idx !== -1 && idx + 1 < siblings.length) {
+      return siblings[idx + 1];
+    }
+    return null;
+  }
+
+  closest(sel) {
+    let curr = this;
+    while (curr) {
+      if (curr.matches && curr.matches(sel)) return curr;
+      curr = curr.parentElement;
+    }
+    return null;
+  }
+
   get textContent() {
     if (this.children.length === 0) return this._textContent;
     return this.children.map(c => c.textContent).join(' ');
@@ -1261,23 +1347,55 @@ class MiniDOMNode {
     if (!sel) return false;
     const parts = sel.split(',').map(s => s.trim());
     for (const part of parts) {
-      if (part.startsWith('.')) {
-        if (this.classList.contains(part.slice(1))) return true;
-      } else if (part.startsWith('#')) {
-        if (this.id === part.slice(1)) return true;
-      } else {
-        const tagAttrMatch = part.match(/^([a-z0-9_-]+)?\[([a-z0-9_-]+)(?:=(['"]?)(.*?)\3)?\]$/i);
-        if (tagAttrMatch) {
-          const [, tag, attr, , val] = tagAttrMatch;
-          if (tag && this.tagName.toLowerCase() !== tag.toLowerCase()) continue;
-          if (val !== undefined && this.getAttribute(attr) === val) return true;
-          if (val === undefined && this.hasAttribute(attr)) return true;
-        } else if (this.tagName.toLowerCase() === part.toLowerCase()) {
-          return true;
+      if (part.includes(' > ')) {
+        const subParts = part.split(' > ').map(s => s.trim());
+        if (!this._matchSinglePart(subParts[subParts.length - 1])) continue;
+        if (subParts.length > 1 && this.parentElement) {
+          if (this.parentElement._matchSinglePart(subParts[subParts.length - 2])) return true;
         }
+        continue;
       }
+      if (this._matchSinglePart(part)) return true;
     }
     return false;
+  }
+
+  _matchSinglePart(part) {
+    if (part === '*') return true;
+    if (part === '.arco-col:not(.load-more)') {
+      return this.classList.contains('arco-col') && !this.classList.contains('load-more');
+    }
+    if (part.startsWith('#') && !part.includes('.') && !part.includes('[')) {
+      return this.id === part.slice(1);
+    }
+    if (part.startsWith('.') && !part.includes('[') && !part.slice(1).includes('.')) {
+      return this.classList.contains(part.slice(1));
+    }
+    let remaining = part;
+    const tagMatch = remaining.match(/^([a-z0-9_-]+)/i);
+    if (tagMatch) {
+      if (this.tagName.toLowerCase() !== tagMatch[1].toLowerCase()) return false;
+      remaining = remaining.slice(tagMatch[1].length);
+    }
+    const attrRegex = /\[([a-z0-9_-]+)(?:([*^$]?=)(['"]?)(.*?)\3)?\]/gi;
+    let m;
+    while ((m = attrRegex.exec(remaining)) !== null) {
+      const attr = m[1];
+      const op = m[2];
+      const val = m[4];
+      const actual = this.getAttribute(attr);
+      if (actual === null) return false;
+      if (op === '=' && actual !== val) return false;
+      if (op === '*=' && !actual.includes(val)) return false;
+      if (op === '^=' && !actual.startsWith(val)) return false;
+      if (op === '$=' && !actual.endsWith(val)) return false;
+    }
+    remaining = remaining.replace(attrRegex, '');
+    const classRegex = /\.([a-z0-9_-]+)/gi;
+    while ((m = classRegex.exec(remaining)) !== null) {
+      if (!this.classList.contains(m[1])) return false;
+    }
+    return true;
   }
 
   querySelectorAll(selector) {
@@ -1345,14 +1463,21 @@ function setupAkileFixture() {
   return { container, row };
 }
 
-function createDOMFilterRunner(fixture, isPanstar = false) {
-  const getCards = () => isPanstar
-    ? fixture.container.querySelectorAll('article[data-marketplace-listing-card]')
-    : fixture.container.querySelectorAll('.server-manage-card');
+function createDOMFilterRunner(fixture, siteType = false) {
+  const isPanstar = (siteType === true || siteType === 'panstar');
+  const isIsvoro = (siteType === 'isvoro');
 
-  const getUnits = () => isPanstar
-    ? fixture.container.querySelectorAll('article[data-marketplace-listing-card]')
-    : fixture.container.querySelectorAll('.arco-col:not(.load-more)');
+  const getCards = () => {
+    if (isIsvoro) return fixture.container.querySelectorAll('.rounded-xl');
+    if (isPanstar) return fixture.container.querySelectorAll('article[data-marketplace-listing-card]');
+    return fixture.container.querySelectorAll('.server-manage-card');
+  };
+
+  const getUnits = () => {
+    if (isIsvoro) return fixture.container.querySelectorAll('.rounded-xl');
+    if (isPanstar) return fixture.container.querySelectorAll('article[data-marketplace-listing-card]');
+    return fixture.container.querySelectorAll('.arco-col:not(.load-more)');
+  };
 
   getCards().forEach((card) => {
     const fullText = card.textContent;
@@ -1370,7 +1495,7 @@ function createDOMFilterRunner(fixture, isPanstar = false) {
     stats.total = 0; stats.normal = 0; stats.blocked = 0; stats.discount = 0;
     const units = getUnits();
     units.forEach((unit) => {
-      const card = isPanstar ? unit : unit.querySelector('.server-manage-card');
+      const card = (isPanstar || isIsvoro) ? unit : unit.querySelector('.server-manage-card');
       const isBlocked = card.dataset.xrvIpBlocked === '1';
       const sale = parseFloat(card.dataset.xrvSale);
       const val = parseFloat(card.dataset.xrvValue);
@@ -1556,6 +1681,267 @@ it('Panstar 周期分类与多条件复合筛选：年付(year)筛选仅剩 1 �
   panstarRunner.filterState.cycle = 'all';
   panstarRunner.filterState.hideBlocked = false;
   panstarRunner.applyFilters();
+});
+
+console.log('\n📌 阶段 13：Isvoro 平台全真 DOM 交互、6 维排序与多条件筛选验证');
+
+const vpsModule = require(userScriptPath);
+
+it('Isvoro 适配器规格契约审查：SITES.isvoro 拥有全部必备字段与处理器', () => {
+  const isv = vpsModule.SITES && vpsModule.SITES.isvoro;
+  assert.ok(isv, '必须导出 SITES.isvoro');
+  assert.strictEqual(typeof isv.cardSelector, 'string', 'cardSelector 必须是选择器字符串');
+  assert.strictEqual(typeof isv.gridSelector, 'string', 'gridSelector 必须是选择器字符串');
+  assert.strictEqual(typeof isv.sortUnitOf, 'function', 'sortUnitOf 必须是函数');
+  assert.strictEqual(typeof isv.priceSelector, 'string', 'priceSelector 必须是选择器字符串');
+  assert.strictEqual(typeof isv.statusSelector, 'string', 'statusSelector 必须是选择器字符串');
+  assert.ok(Array.isArray(isv.fallbackSelectors), 'fallbackSelectors 必须是数组');
+  assert.strictEqual(typeof isv.findField, 'function', 'findField 必须是函数');
+  assert.strictEqual(typeof isv.ipText, 'function', 'ipText 必须是函数');
+  assert.strictEqual(typeof isv.isIpBlocked, 'function', 'isIpBlocked 必须是函数');
+  assert.strictEqual(typeof isv.networkUsage, 'function', 'networkUsage 必须是函数');
+});
+
+function setupIsvoroFixture() {
+  const container = new MiniDOMNode('div', 'view-isvoro');
+  const tabPanel = new MiniDOMNode('div', '', 'space-y-4');
+  tabPanel.setAttribute('role', 'tabpanel');
+  tabPanel.setAttribute('data-state', 'active');
+  container.appendChild(tabPanel);
+
+  const grid = new MiniDOMNode('div', 'cards-grid', 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4');
+  tabPanel.appendChild(grid);
+
+  const isvoroData = [
+    { id: 'iv1', title: 'HK-BGP-Standard-01', price: '¥25.00', status: '[IP正常]', renewal: '¥45.00/月', cycle: 'month', sale: 25, val: 45, days: 30, trafficRatio: 0.85, discountRate: 0.444, monthlyRenew: 45, dailyCost: 0.833 },
+    { id: 'iv2', title: 'TYO-Softbank-01', price: '¥380.00', status: '[IP正常]', renewal: '¥480.00/年', cycle: 'year', sale: 380, val: 420.82, days: 320, trafficRatio: 0.829, discountRate: 0.097, monthlyRenew: 40, dailyCost: 1.188 },
+    { id: 'iv3', title: 'SJC-Premium-Blocked', price: '¥120.00', status: '[IP被墙]', renewal: '¥240.00/年', cycle: 'year', sale: 120, val: 164.38, days: 250, trafficRatio: 0.90, discountRate: 0.27, monthlyRenew: 20, dailyCost: 0.48 },
+    { id: 'iv4', title: 'SGP-Direct-Route', price: '¥6.00', status: '[IP正常]', renewal: '¥30.00/月', cycle: 'month', sale: 6, val: 25, days: 25, trafficRatio: 0.96, discountRate: 0.76, monthlyRenew: 30, dailyCost: 0.24 },
+    { id: 'iv5', title: 'FRA-Monster-Traffic', price: '¥130.00', status: '[IP正常]', renewal: '¥150.00/季', cycle: 'quarter', sale: 130, val: 100, days: 60, trafficRatio: 0.99, discountRate: 0, monthlyRenew: 50, dailyCost: 2.167 },
+    { id: 'iv6', title: 'HK-Expired-Deal', price: '¥15.00', status: '[IP正常]', renewal: '¥40.00/月', cycle: 'month', sale: 15, val: 0, days: 0, trafficRatio: 0, discountRate: 0, monthlyRenew: 40, dailyCost: Infinity },
+    { id: 'iv7', title: 'US-Unblock-Good', price: '¥20.00', status: '[IP正常]', renewal: '¥25.00/月', cycle: 'month', sale: 20, val: 25, days: 35, trafficRatio: 0.90, discountRate: 0.20, monthlyRenew: 25, dailyCost: 0.571, note: '包含原生防火墙保护，未阻断直连顺畅，续费锁价机型' },
+  ];
+
+  isvoroData.forEach((d) => {
+    const card = new MiniDOMNode('div', `isvoro-card-${d.id}`, 'rounded-xl border bg-card text-card-foreground shadow-sm flex flex-col p-4');
+    card.dataset.xrvSale = String(d.sale);
+    card.dataset.xrvValue = String(d.val);
+    card.dataset.xrvCycle = d.cycle;
+    card.dataset.xrvDays = String(d.days);
+    card.dataset.xrvTrafficRatio = String(d.trafficRatio);
+    card.dataset.xrvDiscountRate = String(d.discountRate);
+    card.dataset.xrvMonthlyRenew = String(d.monthlyRenew);
+    card.dataset.xrvDailyCost = String(d.dailyCost);
+
+    const header = new MiniDOMNode('div', '', 'pb-3');
+    const title = new MiniDOMNode('div', '', 'text-lg font-semibold');
+    title.textContent = d.title;
+    header.appendChild(title);
+
+    const statusContainer = new MiniDOMNode('div', '', 'mt-1');
+    const statusChip = new MiniDOMNode('span', '', d.status.includes('被墙') ? 'text-destructive bg-destructive/10' : 'text-success bg-success/15');
+    statusChip.textContent = d.status;
+    statusContainer.appendChild(statusChip);
+    header.appendChild(statusContainer);
+    card.appendChild(header);
+
+    const body = new MiniDOMNode('div', '', 'flex-1 flex flex-col');
+    const dl = new MiniDOMNode('dl', '', 'grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm');
+
+    const dtRenewal = new MiniDOMNode('dt', '', 'text-muted-foreground');
+    dtRenewal.textContent = '续费价格';
+    const ddRenewal = new MiniDOMNode('dd', '', 'text-primary');
+    ddRenewal.textContent = d.renewal;
+    dl.appendChild(dtRenewal);
+    dl.appendChild(ddRenewal);
+
+    const dtExpiry = new MiniDOMNode('dt', '', 'text-muted-foreground');
+    dtExpiry.textContent = '到期时间';
+    const ddExpiry = new MiniDOMNode('dd', '', '');
+    ddExpiry.textContent = d.days > 0 ? '2026-11-20 18:00' : '2026-10-01 00:00';
+    dl.appendChild(dtExpiry);
+    dl.appendChild(ddExpiry);
+
+    const dtNetwork = new MiniDOMNode('dt', '', 'text-muted-foreground');
+    dtNetwork.textContent = '网络';
+    const ddNetwork = new MiniDOMNode('dd', '', '');
+    ddNetwork.textContent = '带宽 500M 流量 150 GB / 1000 GB';
+    dl.appendChild(dtNetwork);
+    dl.appendChild(ddNetwork);
+
+    if (d.note) {
+      const dtNote = new MiniDOMNode('dt', '', 'text-muted-foreground');
+      dtNote.textContent = '描述';
+      const ddNote = new MiniDOMNode('dd', '', '');
+      ddNote.textContent = d.note;
+      dl.appendChild(dtNote);
+      dl.appendChild(ddNote);
+    }
+
+    body.appendChild(dl);
+
+    const footer = new MiniDOMNode('div', '', 'flex items-end justify-between pt-4 mt-auto border-t');
+    const priceEl = new MiniDOMNode('div', '', 'text-2xl font-bold text-primary');
+    priceEl.textContent = d.price;
+    footer.appendChild(priceEl);
+    body.appendChild(footer);
+
+    card.appendChild(body);
+    grid.appendChild(card);
+  });
+
+  return { container, grid, tabPanel };
+}
+
+const isvoroDOM = setupIsvoroFixture();
+const isvoroRunner = createDOMFilterRunner(isvoroDOM, 'isvoro');
+
+it('Isvoro DOM 规格字段提取：findField 精准从 <dl><dt><dd> 结构中提取续费价格、到期时间与网络流量', () => {
+  const cards = isvoroRunner.getCards();
+  const card1 = cards[0];
+  const isv = vpsModule.SITES.isvoro;
+
+  const renewalField = isv.findField(card1, 'renewal');
+  assert.ok(renewalField, '必须找到 renewal 字段');
+  assert.strictEqual(renewalField.row.tagName, 'DL', 'row 必须返回 dl 节点以保证不破坏网格排版');
+  assert.strictEqual(renewalField.valueEl.tagName, 'DD', 'valueEl 必须是 dd 节点');
+  assert.strictEqual(renewalField.raw, '¥45.00/月');
+
+  const expiryField = isv.findField(card1, 'expiry');
+  assert.ok(expiryField, '必须找到 expiry 字段');
+  assert.strictEqual(expiryField.row.tagName, 'DL');
+  assert.ok(expiryField.raw.includes('2026-11-20'));
+
+  const networkField = isv.findField(card1, 'network');
+  assert.ok(networkField, '必须找到 network 字段');
+  assert.strictEqual(networkField.row.tagName, 'DL');
+  assert.ok(networkField.raw.includes('150 GB / 1000 GB'));
+});
+
+it('Isvoro sortUnitOf 验证：卡片本身即为排序单元', () => {
+  const cards = isvoroRunner.getCards();
+  const isv = vpsModule.SITES.isvoro;
+  cards.forEach((c) => {
+    assert.strictEqual(isv.sortUnitOf(c), c, 'Isvoro 卡片自身即为 Grid 子项');
+  });
+});
+
+it('Isvoro 全卡片智能打标：精准识别 IP normal 与 IP blocked 状态', () => {
+  const cards = isvoroRunner.getCards();
+  const cardBlocked = cards.find(c => c.id === 'isvoro-card-iv3');
+  assert.strictEqual(cardBlocked.dataset.xrvIpBlocked, '1');
+  assert.strictEqual(cardBlocked.classList.contains('xrv-card-blocked'), true);
+
+  const normalCards = cards.filter(c => c.id !== 'isvoro-card-iv3');
+  normalCards.forEach(c => assert.strictEqual(c.dataset.xrvIpBlocked, '0'));
+});
+
+it('Isvoro 排序矩阵：🔥 折扣最大 (discountRateDesc) 模式下 76% 折扣神机置顶', () => {
+  const cards = isvoroRunner.getCards();
+  const sorted = [...cards].sort((a, b) => getCardSortScore(a, 'discountRateDesc') - getCardSortScore(b, 'discountRateDesc'));
+  assert.strictEqual(sorted[0].id, 'isvoro-card-iv4');
+});
+
+it('Isvoro 排序矩阵：👑 月均续费最低 (monthlyRenewAsc) 模式下正常机器置顶且被墙机沉底', () => {
+  const cards = isvoroRunner.getCards();
+  const sorted = [...cards].sort((a, b) => getCardSortScore(a, 'monthlyRenewAsc') - getCardSortScore(b, 'monthlyRenewAsc'));
+  // iv7: 25/mo 是正常机器中最低月均续费
+  assert.strictEqual(sorted[0].id, 'isvoro-card-iv7');
+  // 被墙机器 iv3 (虽然 renewal/12 是 20) 必须因为 1 亿惩罚基数沉底
+  assert.strictEqual(sorted[sorted.length - 1].id, 'isvoro-card-iv3');
+});
+
+it('Isvoro 排序矩阵：🎁 倒贴最多 (discountDesc) 模式下净让利最多机器置顶', () => {
+  const cards = isvoroRunner.getCards();
+  const sorted = [...cards].sort((a, b) => getCardSortScore(a, 'discountDesc') - getCardSortScore(b, 'discountDesc'));
+  // iv2: val 420.82 - sale 380 = 40.82 净倒贴第一
+  assert.strictEqual(sorted[0].id, 'isvoro-card-iv2');
+  // 被墙机器 iv3 必须绝对沉底
+  assert.strictEqual(sorted[sorted.length - 1].id, 'isvoro-card-iv3');
+});
+
+it('Isvoro 排序矩阵：📶 剩余流量最多 (trafficDesc) 模式下 99% 可用神机置顶', () => {
+  const cards = isvoroRunner.getCards();
+  const sorted = [...cards].sort((a, b) => getCardSortScore(a, 'trafficDesc') - getCardSortScore(b, 'trafficDesc'));
+  assert.strictEqual(sorted[0].id, 'isvoro-card-iv5');
+});
+
+it('Isvoro 排序矩阵：⏱ 日均成本最低 (costDailyAsc) 模式下过期机器安全沉底', () => {
+  const cards = isvoroRunner.getCards();
+  const sorted = [...cards].sort((a, b) => getCardSortScore(a, 'costDailyAsc') - getCardSortScore(b, 'costDailyAsc'));
+  // 最低日均成本是 iv4 (0.24 元/天)
+  assert.strictEqual(sorted[0].id, 'isvoro-card-iv4');
+  // 过期机器 iv6 或被墙机器 iv3 沉底
+  const lastCards = sorted.slice(-2).map(c => c.id);
+  assert.ok(lastCards.includes('isvoro-card-iv6'), '过期机器必须沉底');
+  assert.ok(lastCards.includes('isvoro-card-iv3'), '被墙机器必须沉底');
+});
+
+it('Isvoro 1 亿权重 IP 状态惩罚绝对沉底：💰 售价最低 (priceAsc) 模式下被墙机器必须沉底', () => {
+  const cards = isvoroRunner.getCards();
+  const sorted = [...cards].sort((a, b) => getCardSortScore(a, 'priceAsc') - getCardSortScore(b, 'priceAsc'));
+  // 最低标价正常机器是 iv4 (¥6.00)
+  assert.strictEqual(sorted[0].id, 'isvoro-card-iv4');
+  // 被墙机器 iv3 (标价 120) 绝不能排在 130 或 380 之前，必须在末位沉底
+  assert.strictEqual(sorted[sorted.length - 1].id, 'isvoro-card-iv3');
+});
+
+it('Isvoro 勾选「隐藏被墙IP」：被墙卡片被彻底隐藏且具备 style.display="none !important"', () => {
+  isvoroRunner.filterState.hideBlocked = true;
+  isvoroRunner.applyFilters();
+
+  const hiddenCards = isvoroRunner.getUnits().filter(u => u.classList.contains('xrv-filter-hidden'));
+  assert.strictEqual(hiddenCards.length, 1);
+  assert.strictEqual(hiddenCards[0].id, 'isvoro-card-iv3');
+  assert.strictEqual(hiddenCards[0].style.display, 'none');
+  assert.strictEqual(hiddenCards[0].style._priorities['display'], 'important');
+
+  const visibleCards = isvoroRunner.getUnits().filter(u => !u.classList.contains('xrv-filter-hidden'));
+  assert.strictEqual(visibleCards.length, 6);
+  assert.strictEqual(isvoroRunner.stats.blocked, 0);
+});
+
+it('Isvoro 反选取消勾选「隐藏被墙IP」：全数恢复且清除行内 display 样式', () => {
+  isvoroRunner.filterState.hideBlocked = false;
+  isvoroRunner.applyFilters();
+
+  const cardIv3 = isvoroRunner.getUnits().find(u => u.id === 'isvoro-card-iv3');
+  assert.strictEqual(cardIv3.classList.contains('xrv-filter-hidden'), false);
+  assert.strictEqual(cardIv3.style.display, undefined);
+
+  const visibleCards = isvoroRunner.getUnits().filter(u => !u.classList.contains('xrv-filter-hidden'));
+  assert.strictEqual(visibleCards.length, 7);
+  assert.strictEqual(isvoroRunner.stats.blocked, 1);
+});
+
+it('Isvoro 周期分类与多条件复合筛选：年付(year)筛选仅剩 2 张，月付+隐藏被墙仅剩 4 张', () => {
+  isvoroRunner.filterState.cycle = 'year';
+  isvoroRunner.applyFilters();
+
+  const yearCards = isvoroRunner.getUnits().filter(u => !u.classList.contains('xrv-filter-hidden'));
+  assert.strictEqual(yearCards.length, 2);
+  const yearIds = yearCards.map(c => c.id);
+  assert.ok(yearIds.includes('isvoro-card-iv2') && yearIds.includes('isvoro-card-iv3'));
+
+  // 月付 + 隐藏被墙
+  isvoroRunner.filterState.cycle = 'month';
+  isvoroRunner.filterState.hideBlocked = true;
+  isvoroRunner.applyFilters();
+
+  const monthUnblocked = isvoroRunner.getUnits().filter(u => !u.classList.contains('xrv-filter-hidden'));
+  assert.strictEqual(monthUnblocked.length, 4);
+  assert.strictEqual(isvoroRunner.stats.blocked, 0);
+
+  // 恢复
+  isvoroRunner.filterState.cycle = 'all';
+  isvoroRunner.filterState.hideBlocked = false;
+  isvoroRunner.applyFilters();
+});
+
+it('Isvoro 防误判清洗验证：包含原生防火墙、未阻断直连的卡片准确识别为正常', () => {
+  const cardIv7 = isvoroRunner.getCards().find(c => c.id === 'isvoro-card-iv7');
+  assert.strictEqual(cardIv7.dataset.xrvIpBlocked, '0');
+  assert.strictEqual(cardIv7.classList.contains('xrv-card-blocked'), false);
 });
 
 console.log('\n================================================================');

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Panstar & Akile 交易所本地仿真调试壳 (v0.4.4)</title>
+  <title>VPS 交易所助手本地三合一仿真沙盒 (v0.5.0)</title>
   <style>
     :root {
       --bg-color: #f3f4f6;
@@ -365,6 +365,40 @@
       color: #64748b;
       margin-top: 4px;
     }
+
+    /* Isvoro Tailwind & Shadcn-Vue 仿真样式 */
+    .isvoro-view {
+      margin-top: 10px;
+    }
+    .rounded-xl { border-radius: 0.75rem; }
+    .border { border: 1px solid var(--border-color); }
+    .bg-card { background-color: var(--card-bg); }
+    .text-card-foreground { color: var(--text-main); }
+    .shadow-sm { box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); }
+    .text-primary { color: #2563eb; }
+    .dark .text-primary, [arco-theme="dark"] .text-primary { color: #60a5fa; }
+    .text-muted-foreground { color: var(--text-muted); }
+    .text-success { color: #16a34a; }
+    .text-destructive { color: #dc2626; }
+    .bg-success\/15 { background-color: rgba(22, 163, 74, 0.15); }
+    .bg-destructive\/10 { background-color: rgba(220, 38, 38, 0.1); }
+    .p-4 { padding: 1rem; }
+    .pb-3 { padding-bottom: 0.75rem; }
+    .pt-4 { padding-top: 1rem; }
+    .mt-auto { margin-top: auto; }
+    .border-t { border-top: 1px solid var(--border-color); }
+    .flex { display: flex; }
+    .flex-col { flex-direction: column; }
+    .flex-1 { flex: 1 1 0%; }
+    .items-center { align-items: center; }
+    .items-end { align-items: flex-end; }
+    .justify-between { justify-content: space-between; }
+    .text-2xl { font-size: 1.5rem; line-height: 2rem; }
+    .font-bold { font-weight: 700; }
+    .font-semibold { font-weight: 600; }
+    .text-lg { font-size: 1.125rem; }
+    .gap-2 { gap: 0.5rem; }
+    .gap-4 { gap: 1rem; }
   </style>
 </head>
 <body>
@@ -372,12 +406,13 @@
   <!-- 顶部开发调试工具栏 -->
   <div class="demo-header">
     <h1>
-      <span>🧪 Panstar & Akile 交易所本地仿真调试环境 (v0.4.4)</span>
+      <span>🧪 VPS 交易所助手本地三合一仿真沙盒 (v0.5.0)</span>
       <span style="font-size: 12px; font-weight: normal; color: #94a3b8;">(127.0.0.1:8788)</span>
     </h1>
     <div class="demo-actions">
       <button type="button" class="demo-btn active" id="btn-akile" onclick="switchSite('akile')">切换至 Akile 视图 (Arco 栅格)</button>
       <button type="button" class="demo-btn" id="btn-panstar" onclick="switchSite('panstar')">切换至 Panstar 视图 (CSS Grid)</button>
+      <button type="button" class="demo-btn" id="btn-isvoro" onclick="switchSite('isvoro')">切换至 Isvoro 视图 (Shadcn-Vue / Tailwind)</button>
       
       <!-- 暗黑模式多维仿真控制栏 (支持 Arco 属性与 .dark 动态切换) -->
       <div class="theme-group">
@@ -800,6 +835,283 @@
       </div>
     </div>
 
+    <!-- ═══ 3. Isvoro 仿真视图 (Shadcn-Vue / Tailwind) ═══ -->
+    <div id="view-isvoro" class="isvoro-view" style="display: none;">
+      <!-- Isvoro 顶部 Tabs 栏 -->
+      <div class="isvoro-tabs-header" style="margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
+        <div role="tablist" style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <button role="tab" data-state="active" class="demo-btn active" style="background:#2563eb; color:#fff;">浏览市场</button>
+          <button role="tab" class="demo-btn" style="opacity:0.6;">我的挂单</button>
+          <button role="tab" class="demo-btn" style="opacity:0.6;">交易记录</button>
+          <button role="tab" class="demo-btn" style="opacity:0.6;">推送记录</button>
+        </div>
+      </div>
+
+      <div role="tabpanel" data-state="active" class="space-y-4">
+        <!-- 交易须知提示条 -->
+        <div style="margin-bottom: 16px; padding: 12px 16px; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 8px; font-size: 13px; color: #d97706; display: flex; align-items: center; gap: 8px;">
+          <span>⚠️ <strong>买家须知：</strong>购买前请谨慎考虑，慎重购买高溢价商品。平台已自动为您计算真实剩余价值与折溢价。</span>
+        </div>
+
+        <!-- 真实卡片网格容器 -->
+        <div id="cards-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px;">
+
+          <!-- 卡片 1: 倒贴甩卖机 (月付，剩余多天，倒贴 ¥20) -->
+          <div class="rounded-xl border bg-card text-card-foreground shadow-sm flex flex-col p-4" id="isvoro-card-1">
+            <div class="pb-3">
+              <div class="flex items-start justify-between gap-2">
+                <div class="text-lg font-semibold leading-tight">HK-BGP-Standard-01</div>
+              </div>
+              <div class="mt-1">
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium text-success bg-success/15">[IP正常]</span>
+              </div>
+            </div>
+            <div class="flex-1 flex flex-col">
+              <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm" style="display:grid; grid-template-columns:auto 1fr; gap:6px 12px; margin: 10px 0; font-size:13px;">
+                <dt class="text-muted-foreground">地区</dt>
+                <dd><span>🇭🇰</span> 香港</dd>
+                <dt class="text-muted-foreground">套餐</dt>
+                <dd>HK-BGP-Standard-1C1G</dd>
+                <dt class="text-muted-foreground">配置</dt>
+                <dd>1 核 1024M 20GB</dd>
+                <dt class="text-muted-foreground">网络</dt>
+                <dd>带宽 500M 流量 <span class="underline decoration-dotted">150 GB / 1000 GB</span></dd>
+                <dt class="text-muted-foreground">IP</dt>
+                <dd>v4 1 个 v6 1 个</dd>
+                <dt class="text-muted-foreground">续费价格</dt>
+                <dd class="text-primary" style="color:#2563eb; font-weight:600;">¥45.00/月</dd>
+                <dt class="text-muted-foreground">重置流量</dt>
+                <dd class="text-primary">¥10.00</dd>
+                <dt class="text-muted-foreground">到期时间</dt>
+                <dd id="isvoro1-date">2026-11-20 18:00</dd>
+              </dl>
+              <div class="flex items-end justify-between pt-4 mt-auto border-t" style="margin-top:auto; padding-top:12px; border-top:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
+                <div class="text-2xl font-bold text-primary" style="font-size:20px; font-weight:700; color:#2563eb;">¥25.00</div>
+                <button type="button" class="demo-btn" style="background:#2563eb; color:#fff; padding:4px 12px;">购买</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 卡片 2: 年付折价神机 (年付，折合 40/月，剩余 320 天，标价 380) -->
+          <div class="rounded-xl border bg-card text-card-foreground shadow-sm flex flex-col p-4" id="isvoro-card-2">
+            <div class="pb-3">
+              <div class="flex items-start justify-between gap-2">
+                <div class="text-lg font-semibold leading-tight">TYO-Softbank-01</div>
+              </div>
+              <div class="mt-1">
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium text-success bg-success/15">[IP正常]</span>
+              </div>
+            </div>
+            <div class="flex-1 flex flex-col">
+              <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm" style="display:grid; grid-template-columns:auto 1fr; gap:6px 12px; margin: 10px 0; font-size:13px;">
+                <dt class="text-muted-foreground">地区</dt>
+                <dd><span>🇯🇵</span> 东京</dd>
+                <dt class="text-muted-foreground">套餐</dt>
+                <dd>TYO-Softbank-2C2G-Annual</dd>
+                <dt class="text-muted-foreground">配置</dt>
+                <dd>2 核 2048M 40GB</dd>
+                <dt class="text-muted-foreground">网络</dt>
+                <dd>带宽 1000M 流量 <span class="underline decoration-dotted">350 GB / 2048 GB</span></dd>
+                <dt class="text-muted-foreground">IP</dt>
+                <dd>v4 1 个 v6 1 个</dd>
+                <dt class="text-muted-foreground">续费价格</dt>
+                <dd class="text-primary" style="color:#2563eb; font-weight:600;">¥480.00/年</dd>
+                <dt class="text-muted-foreground">重置流量</dt>
+                <dd class="text-primary">¥25.00</dd>
+                <dt class="text-muted-foreground">到期时间</dt>
+                <dd id="isvoro2-date">2027-09-15 12:00</dd>
+              </dl>
+              <div class="flex items-end justify-between pt-4 mt-auto border-t" style="margin-top:auto; padding-top:12px; border-top:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
+                <div class="text-2xl font-bold text-primary" style="font-size:20px; font-weight:700; color:#2563eb;">¥380.00</div>
+                <button type="button" class="demo-btn" style="background:#2563eb; color:#fff; padding:4px 12px;">购买</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 卡片 3: 年付但 IP 被墙 (低价 120，续费 240/年，IP 被墙必须 1 亿沉底) -->
+          <div class="rounded-xl border bg-card text-card-foreground shadow-sm flex flex-col p-4" id="isvoro-card-3">
+            <div class="pb-3">
+              <div class="flex items-start justify-between gap-2">
+                <div class="text-lg font-semibold leading-tight">SJC-Premium-Blocked</div>
+              </div>
+              <div class="mt-1">
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium text-destructive bg-destructive/10">[IP被墙]</span>
+              </div>
+            </div>
+            <div class="flex-1 flex flex-col">
+              <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm" style="display:grid; grid-template-columns:auto 1fr; gap:6px 12px; margin: 10px 0; font-size:13px;">
+                <dt class="text-muted-foreground">地区</dt>
+                <dd><span>🇺🇸</span> 圣何塞</dd>
+                <dt class="text-muted-foreground">套餐</dt>
+                <dd>SJC-BGP-1C1G-Blocked</dd>
+                <dt class="text-muted-foreground">配置</dt>
+                <dd>1 核 1024M 20GB</dd>
+                <dt class="text-muted-foreground">网络</dt>
+                <dd>带宽 300M 流量 <span class="underline decoration-dotted">100 GB / 1000 GB</span></dd>
+                <dt class="text-muted-foreground">IP</dt>
+                <dd>v4 1 个 (被封锁)</dd>
+                <dt class="text-muted-foreground">续费价格</dt>
+                <dd class="text-primary" style="color:#2563eb; font-weight:600;">¥240.00/年</dd>
+                <dt class="text-muted-foreground">重置流量</dt>
+                <dd class="text-primary">¥15.00</dd>
+                <dt class="text-muted-foreground">到期时间</dt>
+                <dd id="isvoro3-date">2027-06-30 00:00</dd>
+              </dl>
+              <div class="flex items-end justify-between pt-4 mt-auto border-t" style="margin-top:auto; padding-top:12px; border-top:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
+                <div class="text-2xl font-bold text-primary" style="font-size:20px; font-weight:700; color:#2563eb;">¥120.00</div>
+                <button type="button" class="demo-btn" style="background:#2563eb; color:#fff; padding:4px 12px;">购买</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 卡片 4: 80% 超大折扣神机 (月付 30，售价仅 6 元，折扣最大模式置顶) -->
+          <div class="rounded-xl border bg-card text-card-foreground shadow-sm flex flex-col p-4" id="isvoro-card-4">
+            <div class="pb-3">
+              <div class="flex items-start justify-between gap-2">
+                <div class="text-lg font-semibold leading-tight">SGP-Direct-Route</div>
+              </div>
+              <div class="mt-1">
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium text-success bg-success/15">[IP正常]</span>
+              </div>
+            </div>
+            <div class="flex-1 flex flex-col">
+              <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm" style="display:grid; grid-template-columns:auto 1fr; gap:6px 12px; margin: 10px 0; font-size:13px;">
+                <dt class="text-muted-foreground">地区</dt>
+                <dd><span>🇸🇬</span> 新加坡</dd>
+                <dt class="text-muted-foreground">套餐</dt>
+                <dd>SGP-Direct-Lite</dd>
+                <dt class="text-muted-foreground">配置</dt>
+                <dd>1 核 512M 15GB</dd>
+                <dt class="text-muted-foreground">网络</dt>
+                <dd>带宽 200M 流量 <span class="underline decoration-dotted">20 GB / 500 GB</span></dd>
+                <dt class="text-muted-foreground">IP</dt>
+                <dd>v4 1 个 v6 1 个</dd>
+                <dt class="text-muted-foreground">续费价格</dt>
+                <dd class="text-primary" style="color:#2563eb; font-weight:600;">¥30.00/月</dd>
+                <dt class="text-muted-foreground">重置流量</dt>
+                <dd class="text-primary">¥5.00</dd>
+                <dt class="text-muted-foreground">到期时间</dt>
+                <dd id="isvoro4-date">2026-11-15 10:00</dd>
+              </dl>
+              <div class="flex items-end justify-between pt-4 mt-auto border-t" style="margin-top:auto; padding-top:12px; border-top:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
+                <div class="text-2xl font-bold text-primary" style="font-size:20px; font-weight:700; color:#2563eb;">¥6.00</div>
+                <button type="button" class="demo-btn" style="background:#2563eb; color:#fff; padding:4px 12px;">购买</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 卡片 5: 10TB 大流量神机 (季付 150，已用 100G / 10240G，流量排序第一) -->
+          <div class="rounded-xl border bg-card text-card-foreground shadow-sm flex flex-col p-4" id="isvoro-card-5">
+            <div class="pb-3">
+              <div class="flex items-start justify-between gap-2">
+                <div class="text-lg font-semibold leading-tight">FRA-Monster-Traffic</div>
+              </div>
+              <div class="mt-1">
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium text-success bg-success/15">[IP正常]</span>
+              </div>
+            </div>
+            <div class="flex-1 flex flex-col">
+              <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm" style="display:grid; grid-template-columns:auto 1fr; gap:6px 12px; margin: 10px 0; font-size:13px;">
+                <dt class="text-muted-foreground">地区</dt>
+                <dd><span>🇩🇪</span> 法兰克福</dd>
+                <dt class="text-muted-foreground">套餐</dt>
+                <dd>FRA-BigTraffic-2C4G</dd>
+                <dt class="text-muted-foreground">配置</dt>
+                <dd>2 核 4096M 60GB</dd>
+                <dt class="text-muted-foreground">网络</dt>
+                <dd>带宽 1000M 流量 <span class="underline decoration-dotted">100 GB / 10240 GB</span></dd>
+                <dt class="text-muted-foreground">IP</dt>
+                <dd>v4 1 个 v6 1 个</dd>
+                <dt class="text-muted-foreground">续费价格</dt>
+                <dd class="text-primary" style="color:#2563eb; font-weight:600;">¥150.00/季</dd>
+                <dt class="text-muted-foreground">重置流量</dt>
+                <dd class="text-primary">¥20.00</dd>
+                <dt class="text-muted-foreground">到期时间</dt>
+                <dd id="isvoro5-date">2026-12-25 15:00</dd>
+              </dl>
+              <div class="flex items-end justify-between pt-4 mt-auto border-t" style="margin-top:auto; padding-top:12px; border-top:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
+                <div class="text-2xl font-bold text-primary" style="font-size:20px; font-weight:700; color:#2563eb;">¥130.00</div>
+                <button type="button" class="demo-btn" style="background:#2563eb; color:#fff; padding:4px 12px;">购买</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 卡片 6: 已过期负资产机 (日均成本无限大，必须安全沉底) -->
+          <div class="rounded-xl border bg-card text-card-foreground shadow-sm flex flex-col p-4" id="isvoro-card-6">
+            <div class="pb-3">
+              <div class="flex items-start justify-between gap-2">
+                <div class="text-lg font-semibold leading-tight">HK-Expired-Deal</div>
+              </div>
+              <div class="mt-1">
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium text-success bg-success/15">[IP正常]</span>
+              </div>
+            </div>
+            <div class="flex-1 flex flex-col">
+              <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm" style="display:grid; grid-template-columns:auto 1fr; gap:6px 12px; margin: 10px 0; font-size:13px;">
+                <dt class="text-muted-foreground">地区</dt>
+                <dd><span>🇭🇰</span> 香港</dd>
+                <dt class="text-muted-foreground">套餐</dt>
+                <dd>HK-BGP-Standard-Old</dd>
+                <dt class="text-muted-foreground">配置</dt>
+                <dd>1 核 1024M 20GB</dd>
+                <dt class="text-muted-foreground">网络</dt>
+                <dd>带宽 500M 流量 <span class="underline decoration-dotted">0 GB / 1000 GB</span></dd>
+                <dt class="text-muted-foreground">IP</dt>
+                <dd>v4 1 个</dd>
+                <dt class="text-muted-foreground">续费价格</dt>
+                <dd class="text-primary" style="color:#2563eb; font-weight:600;">¥40.00/月</dd>
+                <dt class="text-muted-foreground">重置流量</dt>
+                <dd class="text-primary">¥10.00</dd>
+                <dt class="text-muted-foreground">到期时间</dt>
+                <dd id="isvoro6-date">2026-10-01 00:00</dd>
+              </dl>
+              <div class="flex items-end justify-between pt-4 mt-auto border-t" style="margin-top:auto; padding-top:12px; border-top:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
+                <div class="text-2xl font-bold text-primary" style="font-size:20px; font-weight:700; color:#2563eb;">¥15.00</div>
+                <button type="button" class="demo-btn" style="background:#2563eb; color:#fff; padding:4px 12px;">购买</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 卡片 7: 含防火墙与锁价防误判机 (描述中含防火墙、未阻断直连，验证清洗矩阵) -->
+          <div class="rounded-xl border bg-card text-card-foreground shadow-sm flex flex-col p-4" id="isvoro-card-7">
+            <div class="pb-3">
+              <div class="flex items-start justify-between gap-2">
+                <div class="text-lg font-semibold leading-tight">US-Unblock-Good</div>
+              </div>
+              <div class="mt-1">
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium text-success bg-success/15">[IP正常]</span>
+              </div>
+            </div>
+            <div class="flex-1 flex flex-col">
+              <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm" style="display:grid; grid-template-columns:auto 1fr; gap:6px 12px; margin: 10px 0; font-size:13px;">
+                <dt class="text-muted-foreground">地区</dt>
+                <dd><span>🇺🇸</span> 洛杉矶</dd>
+                <dt class="text-muted-foreground">套餐</dt>
+                <dd>LAX-Unblock-1C1G</dd>
+                <dt class="text-muted-foreground">配置</dt>
+                <dd>1 核 1024M 25GB</dd>
+                <dt class="text-muted-foreground">网络</dt>
+                <dd>带宽 500M 流量 <span class="underline decoration-dotted">50 GB / 500 GB</span></dd>
+                <dt class="text-muted-foreground">IP</dt>
+                <dd>v4 1 个 (包含原生防火墙保护，未阻断直连顺畅，续费锁价机型)</dd>
+                <dt class="text-muted-foreground">续费价格</dt>
+                <dd class="text-primary" style="color:#2563eb; font-weight:600;">¥25.00/月</dd>
+                <dt class="text-muted-foreground">重置流量</dt>
+                <dd class="text-primary">¥5.00</dd>
+                <dt class="text-muted-foreground">到期时间</dt>
+                <dd id="isvoro7-date">2026-11-28 12:00</dd>
+              </dl>
+              <div class="flex items-end justify-between pt-4 mt-auto border-t" style="margin-top:auto; padding-top:12px; border-top:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
+                <div class="text-2xl font-bold text-primary" style="font-size:20px; font-weight:700; color:#2563eb;">¥20.00</div>
+                <button type="button" class="demo-btn" style="background:#2563eb; color:#fff; padding:4px 12px;">购买</button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <!-- 自动化验收测试结果浮层 -->
@@ -848,15 +1160,31 @@
     document.getElementById('panstar6-date').textContent = d(25);  // 流量第一
     document.getElementById('panstar7-date').textContent = d(-2);  // 已过期
 
+    // Isvoro 动态日期赋值
+    if (document.getElementById('isvoro1-date')) document.getElementById('isvoro1-date').textContent = d(30);
+    if (document.getElementById('isvoro2-date')) document.getElementById('isvoro2-date').textContent = d(320); // 年付
+    if (document.getElementById('isvoro3-date')) document.getElementById('isvoro3-date').textContent = d(250); // 年付被墙
+    if (document.getElementById('isvoro4-date')) document.getElementById('isvoro4-date').textContent = d(25);  // 80% 折扣
+    if (document.getElementById('isvoro5-date')) document.getElementById('isvoro5-date').textContent = d(60);  // 季付大流量
+    if (document.getElementById('isvoro6-date')) document.getElementById('isvoro6-date').textContent = d(-2);  // 已过期
+    if (document.getElementById('isvoro7-date')) document.getElementById('isvoro7-date').textContent = d(35);
+
     function switchSite(site) {
       const url = new URL(location.href);
       url.searchParams.set('site', site);
       history.replaceState(null, '', url);
       document.getElementById('view-akile').style.display = site === 'akile' ? 'block' : 'none';
       document.getElementById('view-panstar').style.display = site === 'panstar' ? 'block' : 'none';
+      document.getElementById('view-isvoro').style.display = site === 'isvoro' ? 'block' : 'none';
       document.getElementById('btn-akile').classList.toggle('active', site === 'akile');
       document.getElementById('btn-panstar').classList.toggle('active', site === 'panstar');
+      document.getElementById('btn-isvoro').classList.toggle('active', site === 'isvoro');
       window.dispatchEvent(new Event('xrv-locationchange'));
+    }
+
+    const initialSite = new URLSearchParams(location.search).get('site');
+    if (initialSite === 'panstar' || initialSite === 'isvoro') {
+      switchSite(initialSite);
     }
 
     function updateThemeUI(mode) {
@@ -1060,13 +1388,18 @@
 
       // 5. 遍历点击各排序模式并验证卡片 order 重排
       const isPanstar = (document.getElementById('view-panstar') && document.getElementById('view-panstar').style.display !== 'none');
-      const getUnits = () => isPanstar
-        ? [...document.querySelectorAll('#view-panstar article[data-marketplace-listing-card]')]
-        : [...document.querySelectorAll('#view-akile .arco-col:not(.load-more)')];
-      const getCards = () => isPanstar
-        ? [...document.querySelectorAll('#view-panstar article[data-marketplace-listing-card]')]
-        : [...document.querySelectorAll('#view-akile .server-manage-card')];
-      const expectedTotal = isPanstar ? 7 : 10;
+      const isIsvoro = (document.getElementById('view-isvoro') && document.getElementById('view-isvoro').style.display !== 'none');
+      const getUnits = () => {
+        if (isIsvoro) return [...document.querySelectorAll('#view-isvoro .grid > div.rounded-xl')];
+        if (isPanstar) return [...document.querySelectorAll('#view-panstar article[data-marketplace-listing-card]')];
+        return [...document.querySelectorAll('#view-akile .arco-col:not(.load-more)')];
+      };
+      const getCards = () => {
+        if (isIsvoro) return [...document.querySelectorAll('#view-isvoro .grid > div.rounded-xl')];
+        if (isPanstar) return [...document.querySelectorAll('#view-panstar article[data-marketplace-listing-card]')];
+        return [...document.querySelectorAll('#view-akile .server-manage-card')];
+      };
+      const expectedTotal = isPanstar ? 7 : (isIsvoro ? 7 : 10);
 
       const modes = ['discountDesc', 'discountRateDesc', 'priceAsc', 'monthlyRenewAsc', 'costDailyAsc', 'trafficDesc', 'default'];
       const recordedOrders = {};
@@ -1084,7 +1417,7 @@
 
           // 校验置底元素 (Akile 专属 load-more)
           const loadMore = document.querySelector('.load-more');
-          if (loadMore && !isPanstar && mode !== 'default') {
+          if (loadMore && !isPanstar && !isIsvoro && mode !== 'default') {
             if (loadMore.style.order !== '999999') throw new Error('load-more 未正确定位在尾部 (HIGH=999999)');
           }
           return `当前卡片 Order 序列: [${orderSig}]`;
@@ -1110,7 +1443,7 @@
         const visibleUnits = getUnits().filter(u => !u.classList.contains('xrv-filter-hidden'));
         if (visibleUnits.length === 0) throw new Error('年付筛选后可见卡片不应为 0');
         visibleUnits.forEach((u) => {
-          const card = isPanstar ? u : u.querySelector('.server-manage-card');
+          const card = (isPanstar || isIsvoro) ? u : u.querySelector('.server-manage-card');
           if (card.dataset.xrvCycle !== 'year') throw new Error('年付筛选下发现了非年付卡片');
         });
         return `年付筛选成功生效，当前显示 ${visibleUnits.length} 张年付机器`;
@@ -1122,7 +1455,7 @@
         const visibleUnits = getUnits().filter(u => !u.classList.contains('xrv-filter-hidden'));
         if (visibleUnits.length === 0) throw new Error('月付筛选后可见卡片不应为 0');
         visibleUnits.forEach((u) => {
-          const card = isPanstar ? u : u.querySelector('.server-manage-card');
+          const card = (isPanstar || isIsvoro) ? u : u.querySelector('.server-manage-card');
           if (card.dataset.xrvCycle !== 'month') throw new Error('月付筛选下发现了非月付卡片');
         });
         return `月付筛选成功生效，当前显示 ${visibleUnits.length} 张月付机器`;
@@ -1144,7 +1477,7 @@
         if (!checkbox.checked) checkbox.click();
         const visibleUnits = getUnits().filter(u => !u.classList.contains('xrv-filter-hidden'));
         visibleUnits.forEach((u) => {
-          const card = isPanstar ? u : u.querySelector('.server-manage-card');
+          const card = (isPanstar || isIsvoro) ? u : u.querySelector('.server-manage-card');
           if (card && card.dataset.xrvIpBlocked === '1') throw new Error('勾选隐藏被墙后依然存在被墙卡片');
         });
         const statBlocked = document.getElementById('xrv-stat-blocked');
@@ -1182,7 +1515,7 @@
         if (!discCheckbox.checked) discCheckbox.click();
         const visibleUnits = getUnits().filter(u => !u.classList.contains('xrv-filter-hidden'));
         visibleUnits.forEach((u) => {
-          const card = isPanstar ? u : u.querySelector('.server-manage-card');
+          const card = (isPanstar || isIsvoro) ? u : u.querySelector('.server-manage-card');
           const sale = parseFloat(card.dataset.xrvSale);
           const val = parseFloat(card.dataset.xrvValue);
           if (sale !== null && val !== null && (val - sale) <= 0.05) {
@@ -1202,7 +1535,7 @@
 
         const visibleUnits = getUnits().filter(u => !u.classList.contains('xrv-filter-hidden'));
         visibleUnits.forEach((u) => {
-          const card = isPanstar ? u : u.querySelector('.server-manage-card');
+          const card = (isPanstar || isIsvoro) ? u : u.querySelector('.server-manage-card');
           if (card.dataset.xrvCycle !== 'month') throw new Error('复合筛选下出现非月付卡片');
           if (card.dataset.xrvIpBlocked === '1') throw new Error('复合筛选下出现被墙卡片');
         });
