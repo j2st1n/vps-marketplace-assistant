@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Panstar & Akile 交易所计算器 — 本地调试与安装中心</title>
+  <title>VPS 交易所助手 — 本地调试与安装中心</title>
   <style>
     :root {
       --primary: #2563eb;
@@ -154,10 +154,10 @@
 
   <div class="container">
     <header>
-      <div class="badge">🚀 v0.3.0 重构版</div>
-      <h1>Panstar & Akile 交易所计算器 · 本地调试中心</h1>
+      <div class="badge">🚀 v0.5.0 三合一版</div>
+      <h1>VPS 交易所助手 · 本地调试中心</h1>
       <p class="desc">
-        已解决 SPA 路由进入不加载、骨架屏失效与粗糙排序问题。支持多维科学排序、1 亿权重 IP 异常沉底、一键过滤被墙及实时统计。
+        统一适配 Panstar、Akile 与 Isvoro 三大二手 VPS 交易市场。自动计算真实剩余价值、折溢价额、实际折数、接手日均成本与归一化月均续费成本；提供 6 维科学排序矩阵、智能多维筛选与明暗双模自适应。
       </p>
     </header>
 
@@ -169,10 +169,10 @@
           <div class="card-desc">
             直接在浏览器中打开此链接，Tampermonkey / Violentmonkey / ScriptCat 扩展将自动弹出安装或更新确认窗口。
           </div>
-          <div class="url-box">http://127.0.0.1:8788/panstar-akile-value.user.js</div>
+          <div class="url-box">http://127.0.0.1:8788/vps-marketplace.user.js</div>
         </div>
         <div style="margin-top: 20px;">
-          <a class="btn btn-primary" style="width: 100%; box-sizing: border-box;" href="/panstar-akile-value.user.js">安装到油猴扩展</a>
+          <a class="btn btn-primary" style="width: 100%; box-sizing: border-box;" href="/vps-marketplace.user.js">安装到油猴扩展</a>
         </div>
       </div>
 
@@ -190,18 +190,19 @@
         </div>
       </div>
 
-      <!-- 卡片 3: 本地交互式双平台仿真壳 -->
+      <!-- 卡片 3: 本地交互式三平台仿真壳 -->
       <div class="card">
         <div>
           <div class="card-title">🧪 交互式仿真调试壳</div>
           <div class="card-desc">
-            内置 Akile (Arco 栅格) 与 Panstar (Grid 布局) 真实卡片数据。支持测试 6 维科学排序、隐藏被墙、骨架屏异步自愈。
+            内置 Akile (Arco 栅格)、Panstar (Grid 布局) 与 Isvoro (Shadcn-Vue & DL) 真实卡片数据。支持测试 6 维科学排序、隐藏被墙、骨架屏异步自愈。
           </div>
           <div class="url-box">http://127.0.0.1:8788/mock-marketplace.html</div>
         </div>
         <div style="margin-top: 20px; display: flex; gap: 8px;">
-          <a class="btn btn-primary" style="flex: 1;" href="/mock-marketplace.html?site=akile">Akile 视图</a>
-          <a class="btn btn-secondary" style="flex: 1;" href="/mock-marketplace.html?site=panstar">Panstar 视图</a>
+          <a class="btn btn-primary" style="flex: 1;" href="/mock-marketplace.html?site=akile">Akile</a>
+          <a class="btn btn-secondary" style="flex: 1;" href="/mock-marketplace.html?site=panstar">Panstar</a>
+          <a class="btn btn-secondary" style="flex: 1;" href="/mock-marketplace.html?site=isvoro">Isvoro</a>
         </div>
       </div>
     </div>

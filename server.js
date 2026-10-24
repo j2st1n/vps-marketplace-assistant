@@ -33,6 +33,9 @@ const server = http.createServer((req, res) => {
   let reqPath = req.url.split('?')[0];
   if (reqPath === '/' || reqPath === '') {
     reqPath = '/index.html';
+  } else if (reqPath === '/panstar-akile-value.user.js') {
+    // 兼容重定向前缀别名
+    reqPath = '/vps-marketplace.user.js';
   }
 
   const filePath = path.join(ROOT_DIR, reqPath);
@@ -64,11 +67,11 @@ const server = http.createServer((req, res) => {
 
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`\n======================================================`);
-  console.log(`🚀 Panstar & Akile 交易所计算器 本地调试服务已启动！`);
+  console.log(`🚀 VPS 交易所助手 本地调试服务已启动！`);
   console.log(`🏠 调试控制台主页: http://127.0.0.1:${PORT}/`);
-  console.log(`📦 油猴脚本安装地址: http://127.0.0.1:${PORT}/panstar-akile-value.user.js`);
+  console.log(`📦 油猴脚本安装地址: http://127.0.0.1:${PORT}/vps-marketplace.user.js`);
   console.log(`⚡ 实时热加载 Loader: http://127.0.0.1:${PORT}/dev.loader.user.js`);
-  console.log(`🧪 双平台仿真测试壳: http://127.0.0.1:${PORT}/mock-marketplace.html`);
+  console.log(`🧪 三平台仿真测试壳: http://127.0.0.1:${PORT}/mock-marketplace.html`);
   console.log(`======================================================\n`);
 });
 

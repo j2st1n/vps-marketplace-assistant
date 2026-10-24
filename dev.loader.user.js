@@ -1,16 +1,23 @@
 // ==UserScript==
-// @name         [DEV] Panstar & Akile 交易所计算器 (本地实时热加载)
-// @namespace    https://github.com/j2st1n/panstar-akile-marketplace-tool
-// @version      0.4.4-dev
+// @name         [DEV] VPS 交易所助手 (本地实时热加载)
+// @namespace    https://github.com/j2st1n/vps-marketplace-assistant
+// @version      0.5.0-dev
 // @description  本地开发调试加载器：页面加载时自动从本地 127.0.0.1:8788 拉取最新源码并执行，无需手动反复更新安装
 // @author       j2st1n
+// @match        *://console.panstar.hk/*
+// @match        *://panstar.hk/*
 // @match        *://panstar.ai/*
 // @match        *://*.panstar.ai/*
+// @match        *://akile.html/*
+// @match        *://akile.io/*
+// @match        *://*.akile.io/*
 // @match        *://akile.ai/*
 // @match        *://*.akile.ai/*
+// @match        *://isvoro.com/*
+// @match        *://*.isvoro.com/*
 // @match        *://127.0.0.1:*/*
 // @match        *://localhost:*/*
-// @homepageURL  https://github.com/j2st1n/panstar-akile-marketplace-tool
+// @homepageURL  https://github.com/j2st1n/vps-marketplace-assistant
 // @grant        GM_xmlhttpRequest
 // @connect      127.0.0.1
 // @connect      localhost
@@ -20,7 +27,7 @@
 (function() {
     'use strict';
     const timestamp = Date.now();
-    const scriptUrl = `http://127.0.0.1:8788/panstar-akile-value.user.js?_t=${timestamp}`;
+    const scriptUrl = `http://127.0.0.1:8788/vps-marketplace.user.js?_t=${timestamp}`;
 
     console.log(`[XRV-Dev-Loader] 正在从本地拉取最新源码: ${scriptUrl}`);
 

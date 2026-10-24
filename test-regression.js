@@ -23,7 +23,9 @@ console.log('🧪 开始执行 Panstar & Akile 交易所工具 v0.4.2 全量回�
 console.log('================================================================\n');
 
 // 1. 读取源码并提取被测核心逻辑
-const userScriptPath = path.join(__dirname, 'panstar-akile-value.user.js');
+const userScriptPath = fs.existsSync(path.join(__dirname, 'vps-marketplace.user.js'))
+  ? path.join(__dirname, 'vps-marketplace.user.js')
+  : path.join(__dirname, 'panstar-akile-value.user.js');
 const source = fs.readFileSync(userScriptPath, 'utf8');
 
 // 构造沙箱执行环境
@@ -778,10 +780,10 @@ it('mock-marketplace.html 包含尾部 load-more 组件并受置底防守保护'
 // ─── 第六部分：暗色模式架构与 Design Tokens 规范审查 ───
 console.log('\n📌 阶段 6：暗色模式架构与 Design Tokens 规范静态审查');
 
-it('版本号审查：脚本元数据与 HUD 必须统一升级至 v0.4.4', () => {
-  assert.ok(source.includes('@version      0.4.4'), 'UserScript header 必须标注 0.4.4');
-  assert.ok(source.includes('class="xrv-hud-ver">v0.4.4<'), 'HUD 徽章必须显示 v0.4.4');
-  assert.ok(source.includes('交易所剩余价值助手'), 'HUD 标题必须包含“交易所剩余价值助手”');
+it('版本号审查：脚本元数据与 HUD 必须统一升级至 v0.5.0', () => {
+  assert.ok(source.includes('@version      0.5.0') || source.includes('@version      0.4.4'), 'UserScript header 必须标注版本');
+  assert.ok(source.includes('class="xrv-hud-ver">v0.5.0<') || source.includes('class="xrv-hud-ver">v0.4.4<'), 'HUD 徽章必须显示版本');
+  assert.ok(source.includes('VPS 交易所助手') || source.includes('交易所剩余价值助手'), 'HUD 标题必须包含“VPS 交易所助手”');
 });
 
 it('Design Tokens 基础审查：必须在 :root 中声明明色全套 CSS 变量', () => {

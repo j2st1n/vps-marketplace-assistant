@@ -1,19 +1,28 @@
 // ==UserScript==
-// @name         Panstar & Akile 交易所剩余价值计算器
-// @name:en      Panstar & Akile Marketplace Remaining-Value Calculator
-// @namespace    https://github.com/j2st1n/panstar-akile-marketplace-tool
-// @version      0.4.4
-// @description  一套脚本同时适配 Panstar 与 Akile 交易所：自动计算每台机器剩余价值、日均持有成本、打折力度（折扣率）、折合月付续费成本，支持科学多维排序（倒贴最多/折扣最大/月均续费最低/日均最低/剩余流量最多）与周期分类筛选（全部/月付/年付）。
-// @description:en  One script for both Panstar and Akile marketplaces: computes remaining value, daily cost, discount rate, normalized monthly renewal cost, multi-dimensional sorting (best bonus, deepest discount, lowest monthly renewal, daily cost, traffic left) and cycle filter (all/monthly/yearly).
+// @name         VPS 交易所助手
+// @name:en      VPS Marketplace Assistant
+// @namespace    https://github.com/j2st1n/vps-marketplace-assistant
+// @version      0.5.0
+// @description  为 Panstar、Akile 与 Isvoro 交易所量身打造：自动计算真实剩余价值、折溢价额、实际折数、接手日均成本与归一化月均续费成本；提供 6 维科学排序矩阵、智能多维筛选与明暗双模自适应。
+// @description:en  Tailor-made for Panstar, Akile and Isvoro marketplaces: automatically calculates true remaining value, discount/premium, daily cost, normalized monthly renewal; provides 6D scientific sorting matrix, multi-filter and dual-mode dark theme.
 // @author       j2st1n
+// @match        *://console.panstar.hk/*
+// @match        *://panstar.hk/*
 // @match        *://panstar.ai/*
 // @match        *://*.panstar.ai/*
+// @match        *://akile.html/*
+// @match        *://akile.io/*
+// @match        *://*.akile.io/*
 // @match        *://akile.ai/*
 // @match        *://*.akile.ai/*
-// @homepageURL  https://github.com/j2st1n/panstar-akile-marketplace-tool
-// @supportURL   https://github.com/j2st1n/panstar-akile-marketplace-tool/issues
-// @updateURL    https://raw.githubusercontent.com/j2st1n/panstar-akile-marketplace-tool/main/panstar-akile-value.user.js
-// @downloadURL  https://raw.githubusercontent.com/j2st1n/panstar-akile-marketplace-tool/main/panstar-akile-value.user.js
+// @match        *://isvoro.com/*
+// @match        *://*.isvoro.com/*
+// @match        *://127.0.0.1:*/*
+// @match        *://localhost:*/*
+// @homepageURL  https://github.com/j2st1n/vps-marketplace-assistant
+// @supportURL   https://github.com/j2st1n/vps-marketplace-assistant/issues
+// @updateURL    https://raw.githubusercontent.com/j2st1n/vps-marketplace-assistant/main/vps-marketplace.user.js
+// @downloadURL  https://raw.githubusercontent.com/j2st1n/vps-marketplace-assistant/main/vps-marketplace.user.js
 // @license      MIT
 // @grant        none
 // @run-at       document-idle
@@ -31,6 +40,9 @@
 //  v0.4.2 重构全卡片智能 IP 状态探测流水线（三级选择器回退+高精度正则+防误伤），
 //  强化筛选事件全覆盖监听与双重行内 style.display='none !important' 级联防御。
 //  v0.4.3 优化 HUD 统计看板文案为“IP正常 / 被墙”，直观联动筛选器。
+//  v0.5.0 品牌与架构全新升级为《VPS 交易所助手》（VPS Marketplace Assistant），
+//  全面接入 Isvoro 二手交易市场适配层，形成 Panstar、Akile、Isvoro 三合一统一架构。
+//  适配 Shadcn-Vue 规格定义列表 <dl> 拓扑、Vue 3 骨架屏自愈机制与 Tailwind HSL 暗黑模式变量。
 //  依 MIT 许可开源发布。
 // ─────────────────────────────────────────────────────────────
 
@@ -164,48 +176,129 @@
         return clone.textContent.trim();
       },
     },
+    isvoro: {
+      // 1. 卡片容器：Shadcn-Vue Card，具备 rounded-xl、border、bg-card 特征
+      cardSelector: '.grid > div.rounded-xl, .grid > div.flex.flex-col.rounded-xl, .grid > div.market-card, .grid > div[class*="rounded-xl"]',
+      // 2. 网格容器：首选当前活动 Tab 面板内的 grid，带回退
+      gridSelector: 'div[role="tabpanel"][data-state="active"] .grid, .grid.grid-cols-1.md\\:grid-cols-2, .grid.grid-cols-1, #cards-grid',
+      // 3. 排序单元：卡片自身即为 Grid 直接子项，直接移动卡片
+      sortUnitOf(card) {
+        return card;
+      },
+      // 4. 售价元素：CardFooter 中的 text-2xl 高亮文本
+      priceSelector: '.pt-4 .text-2xl, [class*="text-2xl"]',
+      // 5. IP 状态专用选择器与备用回退列表
+      statusSelector: '.pb-3 span, .pb-3 [class*="text-success"], .pb-3 [class*="text-destructive"]',
+      fallbackSelectors: ['.badge', '[class*="badge"]', 'span[class*="text-"]', '[class*="status"]'],
+      // 6. 依字段键在卡片内取值：Isvoro 使用 <dl> + <dt>/<dd> 键值网格
+      findField(card, key) {
+        const dl = card.querySelector('dl');
+        if (!dl) return null;
+
+        const labelMap = {
+          renewal: ['续费价格', 'Renewal', 'Renewal Price'],
+          expiry: ['到期时间', 'Expires', 'Expiration Time'],
+          network: ['网络', 'Network'],
+        };
+        const targets = labelMap[key];
+        if (!targets) return null;
+
+        const dts = dl.querySelectorAll('dt');
+        for (const dt of dts) {
+          const txt = dt.textContent.trim();
+          if (targets.some((lbl) => txt.includes(lbl))) {
+            const dd = dt.nextElementSibling;
+            if (!dd) continue;
+            // 重要架构设计：row 返回 dl 容器本身，metrics 容器精准挂载于 <dl> 之后、CardFooter 之前
+            return {
+              row: dl,
+              valueEl: dd,
+              raw: dd.textContent.trim(),
+            };
+          }
+        }
+        return null;
+      },
+      ipText(chip) {
+        return chip ? chip.textContent.trim() : '';
+      },
+      isIpBlocked(text) {
+        return isIpBlockedUnified(text);
+      },
+      networkUsage(valueEl) {
+        if (!valueEl) return null;
+        const trafficEl = valueEl.querySelector('.xrv-traffic');
+        if (!trafficEl) return valueEl.textContent.trim();
+        const clone = valueEl.cloneNode(true);
+        clone.querySelectorAll('.xrv-traffic').forEach((el) => el.remove());
+        return clone.textContent.trim();
+      },
+    },
   };
 
   // 探测当前站点
   function detectSite() {
-    const host = location.hostname || '';
+    const loc = typeof location !== 'undefined' ? location : null;
+    const host = loc ? (loc.hostname || '') : '';
     if (/panstar/.test(host)) return 'panstar';
     if (/akile/.test(host)) return 'akile';
-    if (host === '127.0.0.1' || host === 'localhost') {
-      const sp = new URLSearchParams(location.search);
-      const forced = sp.get('site');
-      if (forced === 'panstar' || forced === 'akile') return forced;
-      if (document.querySelector('article[data-marketplace-listing-card]')) return 'panstar';
-      if (document.querySelector('.server-manage-card')) return 'akile';
+    if (/isvoro/.test(host)) return 'isvoro';
+
+    // 本地沙箱与测试环境支持通过 URL 参数或 DOM 自动探测
+    if (host === '127.0.0.1' || host === 'localhost' || !host) {
+      if (loc && loc.search) {
+        const sp = new URLSearchParams(loc.search);
+        const forced = sp.get('site');
+        if (forced === 'panstar' || forced === 'akile' || forced === 'isvoro') return forced;
+      }
+
+      if (typeof document !== 'undefined') {
+        if (document.querySelector('article[data-marketplace-listing-card]')) return 'panstar';
+        if (document.querySelector('.server-manage-card')) return 'akile';
+        if (
+          document.querySelector('.market-card') ||
+          document.querySelector('div[role="tabpanel"][data-state="active"]') ||
+          document.querySelector('.grid > div.rounded-xl')
+        ) return 'isvoro';
+      }
       return 'akile';
     }
-    return host.indexOf('panstar') !== -1 ? 'panstar' : 'akile';
+    return host.indexOf('panstar') !== -1 ? 'panstar' : (host.indexOf('isvoro') !== -1 ? 'isvoro' : 'akile');
   }
 
   const SITE = (() => {
     const name = detectSite();
-    const cfg = SITES[name];
+    const cfg = SITES[name] || SITES.akile;
     cfg.name = name;
     return cfg;
   })();
 
-  // 语言——Panstar 有中英，Akile 用中文
+  // 语言——支持中英自动检测
   function isZh() {
-    return SITE.name === 'akile' || (document.documentElement.lang || '').toLowerCase().indexOf('zh') === 0;
+    if (SITE.name === 'akile') return true;
+    const docLang = typeof document !== 'undefined' && document.documentElement ? document.documentElement.lang : '';
+    const navLang = typeof navigator !== 'undefined' ? navigator.language : '';
+    const lang = (docLang || navLang || 'zh-CN').toLowerCase();
+    return lang.indexOf('zh') === 0;
   }
 
   // 路由判定：是否处于交易所页面
   function isMarketplaceRoute() {
-    const host = location.hostname || '';
+    const loc = typeof location !== 'undefined' ? location : null;
+    if (!loc) return false;
+    const host = loc.hostname || '';
     if (host === '127.0.0.1' || host === 'localhost') {
       return true; // 本地调试壳环境默认直接激活
     }
-    const path = location.pathname || '';
+    const path = loc.pathname || '';
     if (SITE.name === 'panstar') {
       return path.startsWith('/console/marketplace');
     }
     if (SITE.name === 'akile') {
       return path.startsWith('/console/pushshop');
+    }
+    if (SITE.name === 'isvoro') {
+      return path.startsWith('/marketplace');
     }
     return false;
   }
@@ -298,7 +391,9 @@
       :root[data-theme="dark"],
       body[data-theme="dark"],
       [data-theme="dark"],
-      html.xrv-panstar {
+      html.xrv-panstar,
+      html.xrv-isvoro.dark,
+      html.xrv-isvoro .dark {
         /* HUD 控制面板容器 */
         --xrv-bg-hud: #1e293b;
         --xrv-border-hud: #334155;
@@ -435,6 +530,32 @@
           --xrv-badge-exp-text: #9ca3af;
           --xrv-badge-exp-border: rgba(107, 114, 128, 0.4);
         }
+      }
+
+      /* Isvoro 平台 Tailwind HSL 变量适配 */
+      html.xrv-isvoro {
+        --xrv-bg-hud: hsl(var(--card, 0 0% 100%));
+        --xrv-border-hud: hsl(var(--border, 214.3 31.8% 91.4%));
+        --xrv-text-main: hsl(var(--card-foreground, 222.2 47.4% 11.2%));
+        --xrv-text-sub: hsl(var(--muted-foreground, 215.4 16.3% 44%));
+        --xrv-btn-bg: hsl(var(--muted, 210 40% 96.1%));
+        --xrv-btn-border: hsl(var(--border, 214.3 31.8% 91.4%));
+        --xrv-btn-text: hsl(var(--card-foreground, 222.2 47.4% 11.2%));
+        --xrv-divider: hsl(var(--border, 214.3 31.8% 91.4%));
+        --xrv-header-border: hsl(var(--border, 214.3 31.8% 91.4%));
+      }
+      html.xrv-isvoro.dark,
+      html.xrv-isvoro .dark,
+      .dark html.xrv-isvoro {
+        --xrv-bg-hud: hsl(var(--card, 224 71% 6%));
+        --xrv-border-hud: hsl(var(--border, 217.2 32.6% 17.5%));
+        --xrv-text-main: hsl(var(--card-foreground, 210 40% 98%));
+        --xrv-text-sub: hsl(var(--muted-foreground, 215 20.2% 65.1%));
+        --xrv-btn-bg: hsl(var(--muted, 217.2 32.6% 17.5%));
+        --xrv-btn-border: hsl(var(--border, 217.2 32.6% 22%));
+        --xrv-btn-text: hsl(var(--card-foreground, 210 40% 98%));
+        --xrv-divider: hsl(var(--border, 217.2 32.6% 17.5%));
+        --xrv-header-border: hsl(var(--border, 217.2 32.6% 17.5%));
       }
 
       /* ─── 组件样式规则 ─── */
@@ -734,7 +855,10 @@
       /* 过滤隐藏类：强化特异性防守，消除宿主栅格与 flex/grid 覆盖 */
       .xrv-filter-hidden,
       .arco-row .arco-col.xrv-filter-hidden,
-      article[data-marketplace-listing-card].xrv-filter-hidden {
+      article[data-marketplace-listing-card].xrv-filter-hidden,
+      .grid > div.rounded-xl.xrv-filter-hidden,
+      .grid > div.market-card.xrv-filter-hidden,
+      div[role="tabpanel"] .grid > div.xrv-filter-hidden {
         display: none !important;
       }
     `;
@@ -1092,6 +1216,16 @@
       return;
     }
 
+    if (SITE.name === 'isvoro') {
+      if (el.dataset.xrvIpSig === sig && (el.classList.contains('xrv-ip-ban') || el.classList.contains('xrv-ip-ok'))) {
+        return;
+      }
+      el.dataset.xrvIpSig = sig;
+      el.classList.remove('xrv-ip-ok', 'xrv-ip-ban');
+      el.classList.add(blocked ? 'xrv-ip-ban' : 'xrv-ip-ok');
+      return;
+    }
+
     // Akile
     if (el.dataset.xrvIpSig === sig && el.querySelector('.xrv-ip-ok, .xrv-ip-ban')) {
       return;
@@ -1153,6 +1287,18 @@
   }
 
   function injectCard(card) {
+    // 骨架屏检测：若卡片未加载完成，跳过并标记 pending 供后续 observer 自愈重试
+    if (
+      card.querySelector('.skeleton') ||
+      card.querySelector('[class*="skeleton"]') ||
+      card.querySelector('.animate-pulse') ||
+      card.classList.contains('h-80') ||
+      (SITE.name === 'isvoro' && !card.querySelector('dl'))
+    ) {
+      card.dataset.xrvStatus = 'pending';
+      return false;
+    }
+
     injectIpStatus(card);
     injectTrafficStock(card);
 
@@ -1472,6 +1618,18 @@
       if (firstCard && firstCard.parentElement) return firstCard.parentElement;
       return null;
     }
+    if (SITE.name === 'isvoro') {
+      const activePanel = document.querySelector('div[role="tabpanel"][data-state="active"]');
+      if (activePanel) {
+        const grid = activePanel.querySelector('.grid.grid-cols-1, .grid');
+        if (grid) return grid;
+      }
+      const grid = document.querySelector(SITE.gridSelector);
+      if (grid) return grid;
+      const firstCard = document.querySelector(SITE.cardSelector);
+      if (firstCard && firstCard.parentElement) return firstCard.parentElement;
+      return null;
+    }
     // Akile
     const firstCard = document.querySelector(SITE.cardSelector);
     if (firstCard) {
@@ -1502,8 +1660,8 @@
         <div class="xrv-hud-header">
           <div class="xrv-hud-brand">
             <span class="xrv-hud-logo">⚡</span>
-            <span class="xrv-hud-title">${zh ? '交易所剩余价值助手' : 'Marketplace Value Assistant'}</span>
-            <span class="xrv-hud-ver">v0.4.4</span>
+            <span class="xrv-hud-title">${zh ? 'VPS 交易所助手' : 'VPS Marketplace Assistant'}</span>
+            <span class="xrv-hud-ver">v0.5.0</span>
           </div>
           <div class="xrv-hud-stats" id="xrv-stats-container">
             ${zh ? '共' : 'Total'} <b id="xrv-stat-total">0</b> ${zh ? '台' : ''} (<span class="xrv-text-green">${zh ? 'IP正常' : 'Normal IP'} <b id="xrv-stat-normal">0</b></span> / <span class="xrv-text-red">${zh ? '被墙' : 'Blocked'} <b id="xrv-stat-blocked">0</b></span>) · <span class="xrv-text-gold">${zh ? '折价捡漏' : 'Deals'} <b id="xrv-stat-discount">0</b> ${zh ? '台' : ''}</span>
@@ -1705,7 +1863,7 @@
     lifecycle.active = true;
 
     injectStyles();
-    document.documentElement.classList.add(SITE.name === 'akile' ? 'xrv-akile' : 'xrv-panstar');
+    document.documentElement.classList.add('xrv-' + SITE.name);
 
     if (!lifecycle.observer) {
       lifecycle.observer = new MutationObserver(handleMutations);
@@ -1753,7 +1911,7 @@
     if (hud) {
       hud.remove();
     }
-    document.documentElement.classList.remove('xrv-akile', 'xrv-panstar');
+    document.documentElement.classList.remove('xrv-akile', 'xrv-panstar', 'xrv-isvoro');
   }
 
   function handleRouteChange() {
@@ -1808,15 +1966,50 @@
     window.addEventListener('xrv-locationchange', fire);
   }
 
+  // ─── 模块与环境导出 ───────────────────────────────────────
+  const exportedAPI = {
+    SITES,
+    detectSite,
+    isMarketplaceRoute,
+    getSortAnchor,
+    IP_PATTERNS,
+    sanitizeIpStatusText,
+    isIpBlockedUnified,
+    currencySymbol,
+    parseRenewalPrice,
+    parseExpiry,
+    calcRemainingValue,
+    parseMoney,
+    parseTrafficAmount,
+    calcTrafficStock,
+    getValuationBadge,
+    getCardSortScore,
+    injectCard,
+    injectIpStatus,
+    injectTrafficStock,
+    extractCardIpStatus,
+    applySortAndFilters,
+    ensureSortBar,
+  };
+
+  if (typeof window !== 'undefined') {
+    window.__VPS_MARKETPLACE_EXPORTS__ = exportedAPI;
+  }
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = exportedAPI;
+  }
+
   // ─── 启动 ─────────────────────────────────────────────────
   function boot() {
     initRouterEngine(handleRouteChange);
     handleRouteChange();
   }
 
-  if (document.body) {
-    boot();
-  } else {
-    document.addEventListener('DOMContentLoaded', boot);
+  if (typeof document !== 'undefined') {
+    if (document.body) {
+      boot();
+    } else {
+      document.addEventListener('DOMContentLoaded', boot);
+    }
   }
 })();
