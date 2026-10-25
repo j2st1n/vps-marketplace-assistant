@@ -402,6 +402,14 @@ it('calcRemainingValue 正确处理多周期预付、年付折算及过期边界
   const r4 = calcRemainingValue('¥30.00 / 月', '2026-03-25 00:00:00', fixedNow);
   assert.strictEqual(r4.remainingDays, 0);
   assert.strictEqual(r4.value, 0);
+
+  // 0元续费探针机（value=0 但未到期）严禁误判为已过期，应正确识别为溢价出让
+  const rZero = calcRemainingValue('¥0.00 / 月', '2026-11-16 21:46:39', new Date('2026-10-24 00:00:00'));
+  assert.ok(rZero.remainingDays > 0, '未到期机器剩余天数必须大于 0');
+  assert.strictEqual(rZero.value, 0, '0元续费机剩余价值为 0');
+  const badge = vpsModule.getValuationBadge(rZero.value, 280, rZero.remainingDays, '¥');
+  assert.notStrictEqual(badge.cls, 'xrv-badge-expired', '未到期机器绝不能被打上已过期徽章');
+  assert.ok(badge.text.includes('溢价'), '挂牌 280 出让 0 价值机器必须显示溢价');
 });
 
 // ─── 第三部分：科学排序矩阵在典型样本下的生效性验证 ───

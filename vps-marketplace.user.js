@@ -1078,7 +1078,7 @@
 
   // ─── 价值模型与徽章判定 ───────────────────────────────────
   function getValuationBadge(value, salePrice, remainingDays, cur) {
-    const isExpired = remainingDays <= 0 || value <= 0;
+    const isExpired = remainingDays <= 0;
     if (isExpired) {
       return {
         cls: 'xrv-badge-expired',
@@ -1103,7 +1103,7 @@
 
     const delta = Math.round((salePrice - value) * 100) / 100;      // 溢价额
     const discount = Math.round((value - salePrice) * 100) / 100;  // 折价/倒贴额
-    const premiumRatio = value > 0 ? ((salePrice - value) / value) * 100 : 0;
+    const premiumRatio = value > 0 ? ((salePrice - value) / value) * 100 : (salePrice > 0 ? 100 : 0);
     const absRatio = Math.abs(premiumRatio).toFixed(1);
 
     if (discount >= 5 || premiumRatio <= -20) {
@@ -1137,6 +1137,17 @@
         delta,
         discount: 0,
         premiumRatio: 0,
+      };
+    }
+    // 0元续费机且标价 > 0，属于纯溢价出让（不显示无意义的除零百分比）
+    if (value <= 0 && salePrice > 0) {
+      return {
+        cls: 'xrv-badge-high-premium',
+        text: `${isZh() ? '溢价' : 'Premium'} +${fmtMoney(delta, cur)}`,
+        barColor: '#ef4444',
+        delta,
+        discount: 0,
+        premiumRatio: 100,
       };
     }
     if (delta <= 10) {
