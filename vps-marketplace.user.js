@@ -8,6 +8,7 @@
 // @author       j2st1n
 // @match        *://console.panstar.hk/*
 // @match        *://panstar.hk/*
+// @match        *://*.panstar.hk/*
 // @match        *://panstar.ai/*
 // @match        *://*.panstar.ai/*
 // @match        *://akile.html/*
@@ -51,8 +52,8 @@
 
   // ─── IP 状态判定正则与防误判清洗矩阵 ─────────────────────────────
   const IP_PATTERNS = {
-    // 明确阻断、被墙、被封、封禁、封锁、被锁、阻断、不可达、失联、不可用、污染、GFW
-    blocked: /(?:ip|IP|网络|连接|端口)?\s*(?:被墙|被封|封禁|封锁|被锁|阻断|不可达|失联|不可用|污染)|GFW|\b(?:blocked|banned|unreachable|gfw)\b/i,
+    // 明确阻断、被墙、被封、封禁、封锁、被锁、阻断、不可达、失联、不可用、污染、GFW、疑似受限
+    blocked: /(?:ip|IP|网络|连接|端口)?\s*(?:被墙|被封|封禁|封锁|被锁|阻断|不可达|失联|不可用|污染|受限|疑似)|GFW|\b(?:blocked|banned|unreachable|gfw)\b|reachability\s*issue/i,
     // 异常、暂无检测、超时、失败
     abnormal: /\bno\s*data\b|暂无(?:数据|检测)?|检测失败|异常|超时|timeout/i,
     // 明确正常
@@ -69,7 +70,7 @@
       .replace(/锁单/gi, '')
       .replace(/不锁\S*/gi, '')
       .replace(/未锁\S*/gi, '')
-      .replace(/(?:不|未|无)\s*(?:阻断|封锁|被墙|不可达)/gi, '');
+      .replace(/(?:不|未|无)\s*(?:阻断|封锁|被墙|不可达|受限)/gi, '');
   }
 
   function isIpBlockedUnified(text) {
@@ -89,30 +90,48 @@
     panstar: {
       // 卡片内容容器
       cardSelector: 'article[data-marketplace-listing-card]',
-      gridSelector: '[data-marketplace-listing-grid]',
+      gridSelector: '[data-marketplace-listing-grid], .console-marketplace-grid, .marketplace-public-grid',
       // Panstar：卡片即 grid 直接子项，排序单元就是卡片本身
       sortUnitOf(card) { return card; },
       // 售价元素
       priceSelector: '.console-marketplace-price',
       // IP 状态专用选择器与备用回退列表
-      statusSelector: '.console-marketplace-status-chip, .console-marketplace-status, [data-status]',
-      fallbackSelectors: ['.arco-tag', '.ant-tag', '.badge', '[class*="status"]', '[data-status]'],
+      statusSelector: '.console-marketplace-status-chip, .console-marketplace-status, [data-status], .console-marketplace-action-small',
+      fallbackSelectors: ['.arco-tag', '.ant-tag', '.badge', '[class*="status"]', '[data-status]', '.console-marketplace-action-small', '[class*="action-small"]'],
       // 依字段键在卡片内取值
       findField(card, key) {
-        const rows = card.querySelectorAll('.console-marketplace-spec-row');
         const labelMap = {
           renewal: ['Renewal Price', '续费价格'],
           expiry: ['Expiration Time', '到期时间'],
           network: ['Network', '网络'],
         };
+        const targets = labelMap[key] || [];
+
+        // 1. 结构化规格行查找：兼容控制台 .console-marketplace-spec-row 与公开市场 dl > div / grid 等行容器
+        const rows = card.querySelectorAll('.console-marketplace-spec-row, dl > div, dl > div.grid');
         for (const row of rows) {
-          const dt = row.querySelector('.console-marketplace-spec-label');
-          const dd = row.querySelector('.console-marketplace-spec-value');
+          const dt = row.querySelector('.console-marketplace-spec-label, dt');
+          const dd = row.querySelector('.console-marketplace-spec-value, dd');
           if (!dt || !dd) continue;
-          if (labelMap[key].includes(dt.textContent.trim())) {
+          const text = dt.textContent.trim();
+          if (targets.some((t) => text === t || text.includes(t) || t.includes(text))) {
             return { row, valueEl: dd, raw: dd.textContent.trim() };
           }
         }
+
+        // 2. 语义级 dt/dd 全卡片查找回退：直接扫描所有 <dt> 并定位关联的 <dd>
+        const allDts = card.querySelectorAll('dt, .console-marketplace-spec-label');
+        for (const dt of allDts) {
+          const text = dt.textContent.trim();
+          if (targets.some((t) => text === t || text.includes(t) || t.includes(text))) {
+            const row = dt.closest('div') || dt.parentElement;
+            const dd = (row ? row.querySelector('.console-marketplace-spec-value, dd') : null) || dt.nextElementSibling;
+            if (dd) {
+              return { row, valueEl: dd, raw: dd.textContent.trim() };
+            }
+          }
+        }
+
         return null;
       },
       // IP 状态文本（小写化用于匹配）
@@ -314,7 +333,7 @@
     }
     const path = loc.pathname || '';
     if (SITE.name === 'panstar') {
-      return path.startsWith('/console/marketplace');
+      return path.startsWith('/console/marketplace') || path.startsWith('/marketplace');
     }
     if (SITE.name === 'akile') {
       return path.startsWith('/console/pushshop');
@@ -1172,6 +1191,7 @@
     const secondarySelectors = [
       '.console-marketplace-status-chip',
       '.console-marketplace-status',
+      '.console-marketplace-action-small',
       '.server-detail',
       '.server-status',
       '.server-tag',
@@ -1180,6 +1200,7 @@
       '.badge',
       '[class*="status"]',
       '[data-status]',
+      '[class*="action-small"]',
     ];
     for (const sel of secondarySelectors) {
       const candEls = card.querySelectorAll(sel);
@@ -1198,10 +1219,10 @@
     }
 
     // Level 2 延伸：规格行匹配 (Spec rows)
-    const infoRows = card.querySelectorAll('.server-info, .console-marketplace-spec-row');
+    const infoRows = card.querySelectorAll('.server-info, .console-marketplace-spec-row, dl > div');
     for (const row of infoRows) {
-      const labelEl = row.querySelector('.info-name, .console-marketplace-spec-label');
-      const valEl = row.querySelector('.info-value, .console-marketplace-spec-value');
+      const labelEl = row.querySelector('.info-name, .console-marketplace-spec-label, dt');
+      const valEl = row.querySelector('.info-value, .console-marketplace-spec-value, dd');
       if (labelEl && valEl) {
         const labelText = (labelEl.textContent || '').trim();
         if (/IP|状态|网络|Network|Status/i.test(labelText)) {
@@ -1475,7 +1496,11 @@
     }
 
     if (!wrapper.isConnected) {
-      expiryField.row.insertAdjacentElement('afterend', wrapper);
+      if (expiryField && expiryField.row && typeof expiryField.row.insertAdjacentElement === 'function') {
+        expiryField.row.insertAdjacentElement('afterend', wrapper);
+      } else if (card) {
+        card.appendChild(wrapper);
+      }
     }
 
     // 更新状态机与指纹

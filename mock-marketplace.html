@@ -236,7 +236,7 @@
       border-radius: 12px;
       color: #e2e8f0;
     }
-    .console-marketplace-grid {
+    .console-marketplace-grid, .marketplace-public-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 16px;
@@ -261,13 +261,20 @@
       font-weight: 700;
       color: #38bdf8;
     }
-    .console-marketplace-status-chip {
+    .console-marketplace-status-chip, .console-marketplace-action-small {
       display: inline-block;
       padding: 2px 8px;
       border-radius: 4px;
       background: #334155;
       font-size: 12px;
       margin-bottom: 8px;
+    }
+    .console-marketplace-action-small {
+      color: #38bdf8;
+    }
+    .console-marketplace-copy-body-strong {
+      color: #94a3b8;
+      font-size: 13px;
     }
     .console-marketplace-spec-row {
       display: flex;
@@ -690,7 +697,13 @@
 
     <!-- ═══ 2. Panstar 仿真视图 ═══ -->
     <div id="view-panstar" class="panstar-view">
-      <div class="console-marketplace-grid" data-marketplace-listing-grid="1">
+      <!-- Panstar 控制台与公开市场双模切换 -->
+      <div class="panstar-submode-tabs" style="display: flex; gap: 8px; margin-bottom: 16px; border-bottom: 1px solid #334155; padding-bottom: 12px;">
+        <button type="button" class="demo-btn active" id="btn-panstar-console" onclick="switchPanstarMode('console')">🖥️ 控制台模式 (/console/marketplace - 类名规范)</button>
+        <button type="button" class="demo-btn" id="btn-panstar-public" onclick="switchPanstarMode('public')">🌐 公开市场模式 (/marketplace - dt/dd 语义规范)</button>
+      </div>
+
+      <div id="panstar-console-grid" class="console-marketplace-grid" data-marketplace-listing-grid="1">
         
         <article data-marketplace-listing-card="1" id="panstar-card-1">
           <div class="console-marketplace-title">
@@ -833,6 +846,186 @@
         </article>
 
       </div>
+
+      <!-- Panstar 公开市场真实 DOM 仿真 (/marketplace) -->
+      <section id="panstar-public-grid" class="marketplace-public-grid" data-marketplace-listing-grid="true" style="display: none;">
+        
+        <!-- 卡片 1: 正常月付机 -->
+        <article data-marketplace-listing-card="true" id="panstar-pub-1" class="marketplace-public-card">
+          <div class="console-marketplace-title">
+            <span>US-West Public Silicon Valley Pro</span>
+            <span class="console-marketplace-price">$28.00</span>
+          </div>
+          <div style="margin-bottom: 8px;">
+            <span class="console-marketplace-action-small">IP normal</span>
+          </div>
+          <dl style="display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0;">
+            <div class="grid" style="display: grid; grid-template-columns: 120px 1fr; gap: 10px; border-bottom: 1px solid #334155; padding: 4px 0;">
+              <dt class="console-marketplace-copy-body-strong">Renewal Price</dt>
+              <dd class="min-w-0 truncate" style="margin: 0; color: #f1f5f9;">$35.00 / Month</dd>
+            </div>
+            <div class="grid" style="display: grid; grid-template-columns: 120px 1fr; gap: 10px; border-bottom: 1px solid #334155; padding: 4px 0;">
+              <dt class="console-marketplace-copy-body-strong">Expiration Time</dt>
+              <dd class="min-w-0 truncate" style="margin: 0; color: #f1f5f9;" id="panstar-pub1-date">2026-05-10 12:00:00</dd>
+            </div>
+            <div class="grid" style="display: grid; grid-template-columns: 120px 1fr; gap: 10px; border-bottom: 1px solid #334155; padding: 4px 0;">
+              <dt class="console-marketplace-copy-body-strong">Network</dt>
+              <dd class="min-w-0 truncate" style="margin: 0; color: #f1f5f9;">1 Gbps | <span class="underline">200GB</span> / 1000GB</dd>
+            </div>
+          </dl>
+        </article>
+
+        <!-- 卡片 2: IP 阻断 (reachability issue 关键字识别) -->
+        <article data-marketplace-listing-card="true" id="panstar-pub-2" class="marketplace-public-card">
+          <div class="console-marketplace-title">
+            <span>JP-Tokyo Public Budget (Reachability Issue)</span>
+            <span class="console-marketplace-price">$3.50</span>
+          </div>
+          <div style="margin-bottom: 8px;">
+            <span class="console-marketplace-action-small" style="color: #f87171;">IP reachability issue</span>
+          </div>
+          <dl style="display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0;">
+            <div class="grid" style="display: grid; grid-template-columns: 120px 1fr; gap: 10px; border-bottom: 1px solid #334155; padding: 4px 0;">
+              <dt class="console-marketplace-copy-body-strong">Renewal Price</dt>
+              <dd class="min-w-0 truncate" style="margin: 0; color: #f1f5f9;">$6.00 / Month</dd>
+            </div>
+            <div class="grid" style="display: grid; grid-template-columns: 120px 1fr; gap: 10px; border-bottom: 1px solid #334155; padding: 4px 0;">
+              <dt class="console-marketplace-copy-body-strong">Expiration Time</dt>
+              <dd class="min-w-0 truncate" style="margin: 0; color: #f1f5f9;" id="panstar-pub2-date">2026-04-18 10:00:00</dd>
+            </div>
+            <div class="grid" style="display: grid; grid-template-columns: 120px 1fr; gap: 10px; border-bottom: 1px solid #334155; padding: 4px 0;">
+              <dt class="console-marketplace-copy-body-strong">Network</dt>
+              <dd class="min-w-0 truncate" style="margin: 0; color: #f1f5f9;">500 Mbps | <span class="underline">450GB</span> / 500GB</dd>
+            </div>
+          </dl>
+        </article>
+
+        <!-- 卡片 3: 新加坡直连平价机 -->
+        <article data-marketplace-listing-card="true" id="panstar-pub-3" class="marketplace-public-card">
+          <div class="console-marketplace-title">
+            <span>SG-Singapore Public Route</span>
+            <span class="console-marketplace-price">$16.00</span>
+          </div>
+          <div style="margin-bottom: 8px;">
+            <span class="console-marketplace-action-small">IP normal</span>
+          </div>
+          <dl style="display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0;">
+            <div class="grid" style="display: grid; grid-template-columns: 120px 1fr; gap: 10px; border-bottom: 1px solid #334155; padding: 4px 0;">
+              <dt class="console-marketplace-copy-body-strong">Renewal Price</dt>
+              <dd class="min-w-0 truncate" style="margin: 0; color: #f1f5f9;">$20.00 / Month</dd>
+            </div>
+            <div class="grid" style="display: grid; grid-template-columns: 120px 1fr; gap: 10px; border-bottom: 1px solid #334155; padding: 4px 0;">
+              <dt class="console-marketplace-copy-body-strong">Expiration Time</dt>
+              <dd class="min-w-0 truncate" style="margin: 0; color: #f1f5f9;" id="panstar-pub3-date">2026-05-01 00:00:00</dd>
+            </div>
+            <div class="grid" style="display: grid; grid-template-columns: 120px 1fr; gap: 10px; border-bottom: 1px solid #334155; padding: 4px 0;">
+              <dt class="console-marketplace-copy-body-strong">Network</dt>
+              <dd class="min-w-0 truncate" style="margin: 0; color: #f1f5f9;">1 Gbps | <span class="underline">100GB</span> / 2000GB</dd>
+            </div>
+          </dl>
+        </article>
+
+        <!-- 卡片 4: 稀缺绝版年付神机 ($24/年 折合 $2/月) -->
+        <article data-marketplace-listing-card="true" id="panstar-pub-4" class="marketplace-public-card">
+          <div class="console-marketplace-title">
+            <span>UK-London Public Rare Annual</span>
+            <span class="console-marketplace-price">$45.00</span>
+          </div>
+          <div style="margin-bottom: 8px;">
+            <span class="console-marketplace-action-small">IP normal</span>
+          </div>
+          <dl style="display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0;">
+            <div class="grid" style="display: grid; grid-template-columns: 120px 1fr; gap: 10px; border-bottom: 1px solid #334155; padding: 4px 0;">
+              <dt class="console-marketplace-copy-body-strong">Renewal Price</dt>
+              <dd class="min-w-0 truncate" style="margin: 0; color: #f1f5f9;">$24.00 / Year</dd>
+            </div>
+            <div class="grid" style="display: grid; grid-template-columns: 120px 1fr; gap: 10px; border-bottom: 1px solid #334155; padding: 4px 0;">
+              <dt class="console-marketplace-copy-body-strong">Expiration Time</dt>
+              <dd class="min-w-0 truncate" style="margin: 0; color: #f1f5f9;" id="panstar-pub4-date">2026-10-01 00:00:00</dd>
+            </div>
+            <div class="grid" style="display: grid; grid-template-columns: 120px 1fr; gap: 10px; border-bottom: 1px solid #334155; padding: 4px 0;">
+              <dt class="console-marketplace-copy-body-strong">Network</dt>
+              <dd class="min-w-0 truncate" style="margin: 0; color: #f1f5f9;">2.5 Gbps | <span class="underline">300GB</span> / 1500GB</dd>
+            </div>
+          </dl>
+        </article>
+
+        <!-- 卡片 5: 80% 巨额折扣神机 -->
+        <article data-marketplace-listing-card="true" id="panstar-pub-5" class="marketplace-public-card">
+          <div class="console-marketplace-title">
+            <span>KR-Seoul Public Flash Deal (80% Off)</span>
+            <span class="console-marketplace-price">$6.00</span>
+          </div>
+          <div style="margin-bottom: 8px;">
+            <span class="console-marketplace-action-small">IP normal</span>
+          </div>
+          <dl style="display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0;">
+            <div class="grid" style="display: grid; grid-template-columns: 120px 1fr; gap: 10px; border-bottom: 1px solid #334155; padding: 4px 0;">
+              <dt class="console-marketplace-copy-body-strong">Renewal Price</dt>
+              <dd class="min-w-0 truncate" style="margin: 0; color: #f1f5f9;">$30.00 / Month</dd>
+            </div>
+            <div class="grid" style="display: grid; grid-template-columns: 120px 1fr; gap: 10px; border-bottom: 1px solid #334155; padding: 4px 0;">
+              <dt class="console-marketplace-copy-body-strong">Expiration Time</dt>
+              <dd class="min-w-0 truncate" style="margin: 0; color: #f1f5f9;" id="panstar-pub5-date">2026-05-01 00:00:00</dd>
+            </div>
+            <div class="grid" style="display: grid; grid-template-columns: 120px 1fr; gap: 10px; border-bottom: 1px solid #334155; padding: 4px 0;">
+              <dt class="console-marketplace-copy-body-strong">Network</dt>
+              <dd class="min-w-0 truncate" style="margin: 0; color: #f1f5f9;">1 Gbps | <span class="underline">50GB</span> / 1000GB</dd>
+            </div>
+          </dl>
+        </article>
+
+        <!-- 卡片 6: 10 Gbps 流量怪兽 (99.98% 剩余) -->
+        <article data-marketplace-listing-card="true" id="panstar-pub-6" class="marketplace-public-card">
+          <div class="console-marketplace-title">
+            <span>DE-Frankfurt Public Traffic King</span>
+            <span class="console-marketplace-price">$22.00</span>
+          </div>
+          <div style="margin-bottom: 8px;">
+            <span class="console-marketplace-action-small">IP normal</span>
+          </div>
+          <dl style="display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0;">
+            <div class="grid" style="display: grid; grid-template-columns: 120px 1fr; gap: 10px; border-bottom: 1px solid #334155; padding: 4px 0;">
+              <dt class="console-marketplace-copy-body-strong">Renewal Price</dt>
+              <dd class="min-w-0 truncate" style="margin: 0; color: #f1f5f9;">$25.00 / Month</dd>
+            </div>
+            <div class="grid" style="display: grid; grid-template-columns: 120px 1fr; gap: 10px; border-bottom: 1px solid #334155; padding: 4px 0;">
+              <dt class="console-marketplace-copy-body-strong">Expiration Time</dt>
+              <dd class="min-w-0 truncate" style="margin: 0; color: #f1f5f9;" id="panstar-pub6-date">2026-04-25 00:00:00</dd>
+            </div>
+            <div class="grid" style="display: grid; grid-template-columns: 120px 1fr; gap: 10px; border-bottom: 1px solid #334155; padding: 4px 0;">
+              <dt class="console-marketplace-copy-body-strong">Network</dt>
+              <dd class="min-w-0 truncate" style="margin: 0; color: #f1f5f9;">10 Gbps | <span class="underline">1GB</span> / 5000GB</dd>
+            </div>
+          </dl>
+        </article>
+
+        <!-- 卡片 7: 已过期边界机 -->
+        <article data-marketplace-listing-card="true" id="panstar-pub-7" class="marketplace-public-card">
+          <div class="console-marketplace-title">
+            <span>HK-Hong Kong Public Expired</span>
+            <span class="console-marketplace-price">$2.00</span>
+          </div>
+          <div style="margin-bottom: 8px;">
+            <span class="console-marketplace-action-small">IP normal</span>
+          </div>
+          <dl style="display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0;">
+            <div class="grid" style="display: grid; grid-template-columns: 120px 1fr; gap: 10px; border-bottom: 1px solid #334155; padding: 4px 0;">
+              <dt class="console-marketplace-copy-body-strong">Renewal Price</dt>
+              <dd class="min-w-0 truncate" style="margin: 0; color: #f1f5f9;">$10.00 / Month</dd>
+            </div>
+            <div class="grid" style="display: grid; grid-template-columns: 120px 1fr; gap: 10px; border-bottom: 1px solid #334155; padding: 4px 0;">
+              <dt class="console-marketplace-copy-body-strong">Expiration Time</dt>
+              <dd class="min-w-0 truncate" style="margin: 0; color: #f1f5f9;" id="panstar-pub7-date">2026-03-01 00:00:00</dd>
+            </div>
+            <div class="grid" style="display: grid; grid-template-columns: 120px 1fr; gap: 10px; border-bottom: 1px solid #334155; padding: 4px 0;">
+              <dt class="console-marketplace-copy-body-strong">Network</dt>
+              <dd class="min-w-0 truncate" style="margin: 0; color: #f1f5f9;">500 Mbps | <span class="underline">100GB</span> / 500GB</dd>
+            </div>
+          </dl>
+        </article>
+
+      </section>
     </div>
 
     <!-- ═══ 3. Isvoro 仿真视图 (Shadcn-Vue / Tailwind) ═══ -->
@@ -1160,6 +1353,29 @@
     document.getElementById('panstar6-date').textContent = d(25);  // 流量第一
     document.getElementById('panstar7-date').textContent = d(-2);  // 已过期
 
+    // Panstar 公开市场动态日期赋值
+    if (document.getElementById('panstar-pub1-date')) document.getElementById('panstar-pub1-date').textContent = d(35);
+    if (document.getElementById('panstar-pub2-date')) document.getElementById('panstar-pub2-date').textContent = d(12);
+    if (document.getElementById('panstar-pub3-date')) document.getElementById('panstar-pub3-date').textContent = d(28);
+    if (document.getElementById('panstar-pub4-date')) document.getElementById('panstar-pub4-date').textContent = d(180); // 年付
+    if (document.getElementById('panstar-pub5-date')) document.getElementById('panstar-pub5-date').textContent = d(30);  // 80% 折扣
+    if (document.getElementById('panstar-pub6-date')) document.getElementById('panstar-pub6-date').textContent = d(25);  // 流量第一
+    if (document.getElementById('panstar-pub7-date')) document.getElementById('panstar-pub7-date').textContent = d(-2);  // 已过期
+
+    function switchPanstarMode(mode) {
+      const consoleGrid = document.getElementById('panstar-console-grid');
+      const publicGrid = document.getElementById('panstar-public-grid');
+      const btnConsole = document.getElementById('btn-panstar-console');
+      const btnPublic = document.getElementById('btn-panstar-public');
+      if (consoleGrid && publicGrid) {
+        consoleGrid.style.display = mode === 'console' ? 'grid' : 'none';
+        publicGrid.style.display = mode === 'public' ? 'grid' : 'none';
+        if (btnConsole) btnConsole.classList.toggle('active', mode === 'console');
+        if (btnPublic) btnPublic.classList.toggle('active', mode === 'public');
+        window.dispatchEvent(new Event('xrv-locationchange'));
+      }
+    }
+
     // Isvoro 动态日期赋值
     if (document.getElementById('isvoro1-date')) document.getElementById('isvoro1-date').textContent = d(30);
     if (document.getElementById('isvoro2-date')) document.getElementById('isvoro2-date').textContent = d(320); // 年付
@@ -1391,12 +1607,18 @@
       const isIsvoro = (document.getElementById('view-isvoro') && document.getElementById('view-isvoro').style.display !== 'none');
       const getUnits = () => {
         if (isIsvoro) return [...document.querySelectorAll('#view-isvoro .grid > div.rounded-xl')];
-        if (isPanstar) return [...document.querySelectorAll('#view-panstar article[data-marketplace-listing-card]')];
+        if (isPanstar) {
+          const activeGrid = document.querySelector('#view-panstar [data-marketplace-listing-grid]:not([style*="display: none"])') || document.querySelector('#view-panstar [data-marketplace-listing-grid]');
+          return [...activeGrid.querySelectorAll('article[data-marketplace-listing-card]')];
+        }
         return [...document.querySelectorAll('#view-akile .arco-col:not(.load-more)')];
       };
       const getCards = () => {
         if (isIsvoro) return [...document.querySelectorAll('#view-isvoro .grid > div.rounded-xl')];
-        if (isPanstar) return [...document.querySelectorAll('#view-panstar article[data-marketplace-listing-card]')];
+        if (isPanstar) {
+          const activeGrid = document.querySelector('#view-panstar [data-marketplace-listing-grid]:not([style*="display: none"])') || document.querySelector('#view-panstar [data-marketplace-listing-grid]');
+          return [...activeGrid.querySelectorAll('article[data-marketplace-listing-card]')];
+        }
         return [...document.querySelectorAll('#view-akile .server-manage-card')];
       };
       const expectedTotal = isPanstar ? 7 : (isIsvoro ? 7 : 10);

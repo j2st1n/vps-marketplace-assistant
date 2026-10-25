@@ -6,6 +6,7 @@
 // @author       j2st1n
 // @match        *://console.panstar.hk/*
 // @match        *://panstar.hk/*
+// @match        *://*.panstar.hk/*
 // @match        *://panstar.ai/*
 // @match        *://*.panstar.ai/*
 // @match        *://akile.html/*

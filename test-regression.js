@@ -27,6 +27,7 @@ const userScriptPath = fs.existsSync(path.join(__dirname, 'vps-marketplace.user.
   ? path.join(__dirname, 'vps-marketplace.user.js')
   : path.join(__dirname, 'panstar-akile-value.user.js');
 const source = fs.readFileSync(userScriptPath, 'utf8');
+const vpsModule = require(userScriptPath);
 
 // 构造沙箱执行环境
 const sandbox = {
@@ -839,6 +840,13 @@ it('mock-marketplace.html 中包含三套平台仿真视图 (Akile / Panstar / I
   assert.ok(mockHtml.includes('HK-BGP-Standard-01'), '必须包含 Isvoro 真实卡片样本');
 });
 
+it('mock-marketplace.html 包含 Panstar 公开市场仿真网格与 dt/dd 卡片示例', () => {
+  assert.ok(mockHtml.includes('marketplace-public-grid'), '必须包含 Panstar 公开市场网格');
+  assert.ok(mockHtml.includes('console-marketplace-action-small'), '必须包含公开市场 action-small 状态标签');
+  assert.ok(mockHtml.includes('console-marketplace-copy-body-strong'), '必须包含公开市场 dt 样式类');
+  assert.ok(mockHtml.includes('switchPanstarMode'), '必须包含 Panstar 控制台与公开市场双模切换函数');
+});
+
 it('mock-marketplace.html 包含尾部 load-more 组件并受置底防守保护', () => {
   assert.ok(mockHtml.includes('class="load-more-box"'), '必须包含 load-more 容器');
   assert.ok(source.includes('isLoadMoreEl'), '脚本中必须有 isLoadMoreEl 置底防守逻辑');
@@ -967,14 +975,15 @@ console.log('\n📌 阶段 8：IP 状态判定与防误判清洗矩阵算法测�
 // 从源码中提取正则与清洗函数进行黑盒/白盒测试
 const ipPatternsMatch = source.match(/const IP_PATTERNS = \{([\s\S]*?)\n  \};/);
 assert.ok(ipPatternsMatch, '必须能提取出 IP_PATTERNS');
-const IP_PATTERNS = {
-  blocked: /(?:ip|IP|网络|连接|端口)?\s*(?:被墙|被封|封禁|封锁|被锁|阻断|不可达|失联|不可用|污染)|GFW|\b(?:blocked|banned|unreachable|gfw)\b/i,
+const IP_PATTERNS = vpsModule.IP_PATTERNS || {
+  blocked: /(?:ip|IP|网络|连接|端口)?\s*(?:被墙|被封|封禁|封锁|被锁|阻断|不可达|失联|不可用|污染|受限|疑似)|GFW|\b(?:blocked|banned|unreachable|gfw)\b|reachability\s*issue/i,
   abnormal: /\bno\s*data\b|暂无(?:数据|检测)?|检测失败|异常|超时|timeout/i,
   normal: /正常|normal|\bok\b|good|healthy|有效/i,
   pending: /检测中|加载中|\b(?:checking|loading)\b|\.\.\./i,
 };
 
 function sanitizeIpStatusText(text) {
+  if (vpsModule && vpsModule.sanitizeIpStatusText) return vpsModule.sanitizeIpStatusText(text);
   if (!text) return '';
   return text
     .replace(/防火墙/gi, '')
@@ -982,10 +991,11 @@ function sanitizeIpStatusText(text) {
     .replace(/锁单/gi, '')
     .replace(/不锁\S*/gi, '')
     .replace(/未锁\S*/gi, '')
-    .replace(/(?:不|未|无)\s*(?:阻断|封锁|被墙|不可达)/gi, '');
+    .replace(/(?:不|未|无)\s*(?:阻断|封锁|被墙|不可达|受限)/gi, '');
 }
 
 function isIpBlockedUnified(text) {
+  if (vpsModule && vpsModule.isIpBlockedUnified) return vpsModule.isIpBlockedUnified(text);
   if (!text) return false;
   const sanitized = sanitizeIpStatusText(text.trim());
   if (IP_PATTERNS.blocked.test(sanitized)) return true;
@@ -1016,6 +1026,8 @@ it('明确阻断关键词全矩阵识别：覆盖被墙、被封、不可达、G
     'ip is gfw blocked',
     'IP被墙 | 延迟 999ms',
     'IP被墙 | 端口不可达',
+    'IP reachability issue',
+    'IP 疑似受限',
   ];
   blockedSamples.forEach((sample) => {
     assert.strictEqual(isIpBlockedUnified(sample), true, `样本 "${sample}" 必须判定为被墙 (true)`);
@@ -1685,7 +1697,7 @@ it('Panstar 周期分类与多条件复合筛选：年付(year)筛选仅剩 1 �
 
 console.log('\n📌 阶段 13：Isvoro 平台全真 DOM 交互、6 维排序与多条件筛选验证');
 
-const vpsModule = require(userScriptPath);
+// vpsModule 已在顶部加载
 
 it('Isvoro 适配器规格契约审查：SITES.isvoro 拥有全部必备字段与处理器', () => {
   const isv = vpsModule.SITES && vpsModule.SITES.isvoro;
@@ -1942,6 +1954,403 @@ it('Isvoro 防误判清洗验证：包含原生防火墙、未阻断直连的卡
   const cardIv7 = isvoroRunner.getCards().find(c => c.id === 'isvoro-card-iv7');
   assert.strictEqual(cardIv7.dataset.xrvIpBlocked, '0');
   assert.strictEqual(cardIv7.classList.contains('xrv-card-blocked'), false);
+});
+
+// ─── 第十四部分：Panstar 公开市场结构与双模适配专有测试套件 ───
+console.log('\n📌 阶段 14：Panstar 公开市场结构与双模适配专有测试套件');
+
+it('Panstar 路由识别：/marketplace 与 /console/marketplace 双路径全面放行且拦截无关路径', () => {
+  const origLoc = global.location;
+  try {
+    // 1. 公开市场路径放行
+    global.location = { hostname: 'panstar.ai', pathname: '/marketplace' };
+    vpsModule.refreshSite();
+    assert.strictEqual(vpsModule.isMarketplaceRoute(), true, 'panstar.ai /marketplace 必须放行');
+
+    global.location = { hostname: 'panstar.ai', pathname: '/marketplace/product/101' };
+    vpsModule.refreshSite();
+    assert.strictEqual(vpsModule.isMarketplaceRoute(), true, 'panstar.ai /marketplace/product/101 必须放行');
+
+    global.location = { hostname: 'panstar.hk', pathname: '/marketplace' };
+    vpsModule.refreshSite();
+    assert.strictEqual(vpsModule.isMarketplaceRoute(), true, 'panstar.hk /marketplace 必须放行');
+
+    // 2. 控制台路径放行
+    global.location = { hostname: 'panstar.ai', pathname: '/console/marketplace' };
+    vpsModule.refreshSite();
+    assert.strictEqual(vpsModule.isMarketplaceRoute(), true, 'panstar.ai /console/marketplace 必须放行');
+
+    global.location = { hostname: 'console.panstar.hk', pathname: '/console/marketplace' };
+    vpsModule.refreshSite();
+    assert.strictEqual(vpsModule.isMarketplaceRoute(), true, 'console.panstar.hk /console/marketplace 必须放行');
+
+    // 3. 拦截无关路由
+    global.location = { hostname: 'panstar.ai', pathname: '/login' };
+    vpsModule.refreshSite();
+    assert.strictEqual(vpsModule.isMarketplaceRoute(), false, 'panstar.ai /login 必须拦截');
+
+    global.location = { hostname: 'panstar.ai', pathname: '/dashboard' };
+    vpsModule.refreshSite();
+    assert.strictEqual(vpsModule.isMarketplaceRoute(), false, 'panstar.ai /dashboard 必须拦截');
+
+    global.location = { hostname: 'panstar.ai', pathname: '/console/orders' };
+    vpsModule.refreshSite();
+    assert.strictEqual(vpsModule.isMarketplaceRoute(), false, 'panstar.ai /console/orders 必须拦截');
+  } finally {
+    global.location = origLoc;
+    vpsModule.refreshSite();
+  }
+});
+
+it('Panstar 站点适配器契约审查：gridSelector 兼容 .marketplace-public-grid，statusSelector 包含 action-small', () => {
+  const pan = vpsModule.SITES && vpsModule.SITES.panstar;
+  assert.ok(pan, '必须导出 SITES.panstar');
+  assert.ok(pan.gridSelector.includes('.marketplace-public-grid'), 'gridSelector 必须包含 .marketplace-public-grid');
+  assert.ok(pan.gridSelector.includes('[data-marketplace-listing-grid]'), 'gridSelector 必须包含 [data-marketplace-listing-grid]');
+  assert.ok(pan.statusSelector.includes('.console-marketplace-action-small'), 'statusSelector 必须包含 .console-marketplace-action-small');
+  assert.ok(pan.fallbackSelectors.includes('[class*="action-small"]'), 'fallbackSelectors 必须包含 [class*="action-small"]');
+  assert.ok(pan.fallbackSelectors.includes('.console-marketplace-action-small'), 'fallbackSelectors 必须包含 .console-marketplace-action-small');
+});
+
+it('Panstar 双模字段解析：控制台模式 (.console-marketplace-spec-row) 精准提取各项规格', () => {
+  const pan = vpsModule.SITES.panstar;
+  const card = new MiniDOMNode('article', 'panstar-console-test');
+  card.setAttribute('data-marketplace-listing-card', '1');
+
+  const addConsoleRow = (label, val) => {
+    const row = new MiniDOMNode('div', '', 'console-marketplace-spec-row');
+    const dt = new MiniDOMNode('span', '', 'console-marketplace-spec-label');
+    dt.textContent = label;
+    const dd = new MiniDOMNode('span', '', 'console-marketplace-spec-value');
+    dd.textContent = val;
+    row.appendChild(dt);
+    row.appendChild(dd);
+    card.appendChild(row);
+  };
+
+  addConsoleRow('Renewal Price', '$35.00 / Month');
+  addConsoleRow('Expiration Time', '2026-05-10 12:00:00');
+  addConsoleRow('Network', '1 Gbps | 200GB / 1000GB');
+
+  const renewalField = pan.findField(card, 'renewal');
+  assert.ok(renewalField, '控制台模式必须解析 renewal 字段');
+  assert.strictEqual(renewalField.raw, '$35.00 / Month');
+
+  const expiryField = pan.findField(card, 'expiry');
+  assert.ok(expiryField, '控制台模式必须解析 expiry 字段');
+  assert.strictEqual(expiryField.raw, '2026-05-10 12:00:00');
+
+  const networkField = pan.findField(card, 'network');
+  assert.ok(networkField, '控制台模式必须解析 network 字段');
+  assert.strictEqual(networkField.raw, '1 Gbps | 200GB / 1000GB');
+});
+
+it('Panstar 双模字段解析：公开市场模式 (<dl><div class="grid"><dt><dd>) 精准提取各项规格', () => {
+  const pan = vpsModule.SITES.panstar;
+  const card = new MiniDOMNode('article', 'panstar-public-test');
+  card.setAttribute('data-marketplace-listing-card', 'true');
+
+  const dl = new MiniDOMNode('dl', '', 'mt-4 flex flex-1 flex-col justify-end gap-[10px]');
+  const addPublicRow = (label, val) => {
+    const row = new MiniDOMNode('div', '', 'grid min-w-0 grid-cols-[96px_minmax(0,1fr)] items-center gap-[10px]');
+    const dt = new MiniDOMNode('dt', '', 'console-marketplace-copy-body-strong whitespace-nowrap text-[rgba(148,163,184,0.58)]');
+    dt.textContent = label;
+    const dd = new MiniDOMNode('dd', '', 'min-w-0 truncate text-[rgba(203,213,225,0.68)]');
+    dd.textContent = val;
+    row.appendChild(dt);
+    row.appendChild(dd);
+    dl.appendChild(row);
+  };
+
+  addPublicRow('Renewal Price', '$24.00 / Year');
+  addPublicRow('Expiration Time', '2026-10-01 00:00:00');
+  addPublicRow('Network', '2.5 Gbps | 300GB / 1500GB');
+  card.appendChild(dl);
+
+  const renewalField = pan.findField(card, 'renewal');
+  assert.ok(renewalField, '公开市场模式必须精准定位 renewal');
+  assert.strictEqual(renewalField.raw, '$24.00 / Year');
+  assert.strictEqual(renewalField.valueEl.tagName, 'DD');
+
+  const expiryField = pan.findField(card, 'expiry');
+  assert.ok(expiryField, '公开市场模式必须精准定位 expiry');
+  assert.strictEqual(expiryField.raw, '2026-10-01 00:00:00');
+  assert.strictEqual(expiryField.valueEl.tagName, 'DD');
+
+  const networkField = pan.findField(card, 'network');
+  assert.ok(networkField, '公开市场模式必须精准定位 network');
+  assert.strictEqual(networkField.raw, '2.5 Gbps | 300GB / 1500GB');
+  assert.strictEqual(networkField.valueEl.tagName, 'DD');
+});
+
+it('Panstar 双模字段解析：公开市场语义回退 (无特定 class 的全卡片 dt/dd 结构) 健壮提取', () => {
+  const pan = vpsModule.SITES.panstar;
+  const card = new MiniDOMNode('article', 'panstar-fallback-test');
+  card.setAttribute('data-marketplace-listing-card', 'true');
+
+  const dl = new MiniDOMNode('dl');
+  const addFallbackRow = (label, val) => {
+    const row = new MiniDOMNode('div');
+    const dt = new MiniDOMNode('dt');
+    dt.textContent = label;
+    const dd = new MiniDOMNode('dd');
+    dd.textContent = val;
+    row.appendChild(dt);
+    row.appendChild(dd);
+    dl.appendChild(row);
+  };
+
+  addFallbackRow('续费价格', '$12.00 / Month');
+  addFallbackRow('到期时间', '2026-12-31 23:59:59');
+  addFallbackRow('网络', '500 Mbps | 50GB / 500GB');
+  card.appendChild(dl);
+
+  assert.strictEqual(pan.findField(card, 'renewal').raw, '$12.00 / Month');
+  assert.strictEqual(pan.findField(card, 'expiry').raw, '2026-12-31 23:59:59');
+  assert.strictEqual(pan.findField(card, 'network').raw, '500 Mbps | 50GB / 500GB');
+});
+
+it('Panstar 公开市场 IP 状态探测：识别 .console-marketplace-action-small 中的 reachability issue 与疑似受限', () => {
+  const pan = vpsModule.SITES.panstar;
+
+  const testIpStatus = (badgeText) => {
+    const card = new MiniDOMNode('article', 'ip-test');
+    card.setAttribute('data-marketplace-listing-card', 'true');
+    const chip = new MiniDOMNode('div', '', 'console-marketplace-action-small');
+    chip.textContent = badgeText;
+    card.appendChild(chip);
+    const chipEl = card.querySelector(pan.statusSelector);
+    const text = pan.ipText(chipEl);
+    const blocked = pan.isIpBlocked(text);
+    const extracted = vpsModule.extractCardIpStatus(card);
+    return { text, blocked, extractedBlocked: extracted.blocked };
+  };
+
+  assert.strictEqual(testIpStatus('IP reachability issue').blocked, true, 'reachability issue 必须识别为阻断');
+  assert.strictEqual(testIpStatus('IP reachability issue').extractedBlocked, true, 'extractCardIpStatus 必须判定为阻断');
+  assert.strictEqual(testIpStatus('IP 疑似受限').blocked, true, '疑似受限必须识别为阻断');
+  assert.strictEqual(testIpStatus('IP blocked').blocked, true, 'blocked 必须识别为阻断');
+  assert.strictEqual(testIpStatus('IP normal').blocked, false, 'normal 判定为正常');
+});
+
+it('Panstar 公开市场 IP 防误判清洗：严格排除未受限、未阻断与原生防火墙等良性词汇', () => {
+  const pan = vpsModule.SITES.panstar;
+
+  const testClean = (badgeText) => {
+    const card = new MiniDOMNode('article', 'clean-test');
+    card.setAttribute('data-marketplace-listing-card', 'true');
+    const chip = new MiniDOMNode('div', '', 'console-marketplace-action-small');
+    chip.textContent = badgeText;
+    card.appendChild(chip);
+    const chipEl = card.querySelector(pan.statusSelector);
+    const text = pan.ipText(chipEl);
+    return pan.isIpBlocked(text);
+  };
+
+  assert.strictEqual(testClean('网络未受限，直连顺畅'), false, '未受限不得误判为阻断');
+  assert.strictEqual(testClean('不阻断海外访问'), false, '不阻断不得误判为阻断');
+  assert.strictEqual(testClean('附带原生防火墙服务'), false, '防火墙不得误判为阻断');
+});
+
+function setupPanstarPublicFixture() {
+  const container = new MiniDOMNode('div', 'view-panstar-public');
+  const grid = new MiniDOMNode('section', 'panstar-public-grid', 'marketplace-public-grid grid min-w-0 grid-cols-1 gap-[16px] md:grid-cols-2 lg:grid-cols-3');
+  grid.setAttribute('data-marketplace-listing-grid', 'true');
+  container.appendChild(grid);
+
+  const publicData = [
+    { id: 'pub1', title: 'US-West Public Silicon Valley Pro', price: '$28.00', status: 'IP normal', renewal: '$35.00 / Month', expiry: '2026-05-10 12:00:00', network: '1 Gbps | 200GB / 1000GB', cycle: 'month', sale: 28, val: 35, days: 35, trafficRatio: 0.8, discountRate: 20, monthlyRenew: 35, dailyCost: 0.8 },
+    { id: 'pub2', title: 'KR-Seoul Public Flash Deal (80% Off)', price: '$6.00', status: 'IP normal', renewal: '$30.00 / Month', expiry: '2026-05-01 00:00:00', network: '1 Gbps | 50GB / 1000GB', cycle: 'month', sale: 6, val: 28, days: 28, trafficRatio: 0.95, discountRate: 78.57, monthlyRenew: 30, dailyCost: 0.214 },
+    { id: 'pub3', title: 'JP-Tokyo Public Budget (Reachability Issue)', price: '$3.00', status: 'IP reachability issue', renewal: '$10.00 / Month', expiry: '2026-04-18 10:00:00', network: '500 Mbps | 450GB / 500GB', cycle: 'month', sale: 3.0, val: 6, days: 12, trafficRatio: 0.1, discountRate: 50, monthlyRenew: 10, dailyCost: 0.25 },
+    { id: 'pub4', title: 'UK-London Public Rare Annual', price: '$45.00', status: 'IP normal', renewal: '$24.00 / Year', expiry: '2026-10-01 00:00:00', network: '2.5 Gbps | 300GB / 1500GB', cycle: 'year', sale: 45, val: 20, days: 180, trafficRatio: 0.8, discountRate: 0, monthlyRenew: 2, dailyCost: 0.25 },
+    { id: 'pub5', title: 'SG-Singapore Public Route Deal', price: '$15.00', status: 'IP normal', renewal: '$45.00 / Month', expiry: '2026-05-01 00:00:00', network: '1 Gbps | 100GB / 2000GB', cycle: 'month', sale: 15, val: 43.5, days: 29, trafficRatio: 0.95, discountRate: 65.5, monthlyRenew: 45, dailyCost: 0.517 },
+    { id: 'pub6', title: 'DE-Frankfurt Public Traffic Monster', price: '$22.00', status: 'IP normal', renewal: '$25.00 / Month', expiry: '2026-04-25 00:00:00', network: '10 Gbps | 1GB / 5000GB', cycle: 'month', sale: 22, val: 20, days: 25, trafficRatio: 0.9998, discountRate: 0, monthlyRenew: 25, dailyCost: 0.88 },
+    { id: 'pub7', title: 'HK-Hong Kong Public Expired', price: '$2.00', status: 'IP normal', renewal: '$10.00 / Month', expiry: '2026-03-01 00:00:00', network: '500 Mbps | 100GB / 500GB', cycle: 'month', sale: 2, val: 0, days: 0, trafficRatio: 0.8, discountRate: 0, monthlyRenew: 10, dailyCost: Infinity },
+  ];
+
+  publicData.forEach((d) => {
+    const card = new MiniDOMNode('article', `panstar-pub-${d.id}`, 'group relative flex min-h-[331px] flex-col overflow-hidden rounded-[20px] border border-white/10 bg-[#0e131f]/90 p-[20px]');
+    card.setAttribute('data-marketplace-listing-card', 'true');
+    card.dataset.xrvSale = String(d.sale);
+    card.dataset.xrvValue = String(d.val);
+    card.dataset.xrvDays = String(d.days);
+    card.dataset.xrvCycle = d.cycle;
+    card.dataset.xrvTrafficRatio = String(d.trafficRatio);
+    card.dataset.xrvDiscountRate = String(d.discountRate);
+    card.dataset.xrvMonthlyRenew = String(d.monthlyRenew);
+    card.dataset.xrvDailyCost = String(d.dailyCost);
+
+    const titleRow = new MiniDOMNode('div', '', 'console-marketplace-title flex items-center justify-between pb-2');
+    const titleText = new MiniDOMNode('span', '', 'font-bold text-white text-base');
+    titleText.textContent = d.title;
+    const priceText = new MiniDOMNode('span', '', 'console-marketplace-price text-lg font-semibold text-emerald-400');
+    priceText.textContent = d.price;
+    titleRow.appendChild(titleText);
+    titleRow.appendChild(priceText);
+    card.appendChild(titleRow);
+
+    const statusWrapper = new MiniDOMNode('div', '', 'mt-2 flex items-center gap-2');
+    const statusChip = new MiniDOMNode('div', '', 'console-marketplace-action-small');
+    statusChip.textContent = d.status;
+    statusWrapper.appendChild(statusChip);
+    card.appendChild(statusWrapper);
+
+    const dl = new MiniDOMNode('dl', '', 'mt-4 flex flex-1 flex-col justify-end gap-[10px]');
+    
+    const rowRenewal = new MiniDOMNode('div', '', 'grid min-w-0 grid-cols-[96px_minmax(0,1fr)] items-center gap-[10px]');
+    const dtRenewal = new MiniDOMNode('dt', '', 'console-marketplace-copy-body-strong whitespace-nowrap text-[rgba(148,163,184,0.58)]');
+    dtRenewal.textContent = 'Renewal Price';
+    const ddRenewal = new MiniDOMNode('dd', '', 'min-w-0 truncate text-[rgba(203,213,225,0.68)]');
+    ddRenewal.textContent = d.renewal;
+    rowRenewal.appendChild(dtRenewal);
+    rowRenewal.appendChild(ddRenewal);
+    dl.appendChild(rowRenewal);
+
+    const rowExpiry = new MiniDOMNode('div', '', 'grid min-w-0 grid-cols-[96px_minmax(0,1fr)] items-center gap-[10px]');
+    const dtExpiry = new MiniDOMNode('dt', '', 'console-marketplace-copy-body-strong whitespace-nowrap text-[rgba(148,163,184,0.58)]');
+    dtExpiry.textContent = 'Expiration Time';
+    const ddExpiry = new MiniDOMNode('dd', '', 'min-w-0 truncate text-[rgba(203,213,225,0.68)]');
+    ddExpiry.textContent = d.expiry;
+    rowExpiry.appendChild(dtExpiry);
+    rowExpiry.appendChild(ddExpiry);
+    dl.appendChild(rowExpiry);
+
+    const rowNetwork = new MiniDOMNode('div', '', 'grid min-w-0 grid-cols-[96px_minmax(0,1fr)] items-center gap-[10px]');
+    const dtNetwork = new MiniDOMNode('dt', '', 'console-marketplace-copy-body-strong whitespace-nowrap text-[rgba(148,163,184,0.58)]');
+    dtNetwork.textContent = 'Network';
+    const ddNetwork = new MiniDOMNode('dd', '', 'min-w-0 truncate text-[rgba(203,213,225,0.68)]');
+    ddNetwork.textContent = d.network;
+    rowNetwork.appendChild(dtNetwork);
+    rowNetwork.appendChild(ddNetwork);
+    dl.appendChild(rowNetwork);
+
+    card.appendChild(dl);
+    grid.appendChild(card);
+  });
+
+  return { container, grid };
+}
+
+const panstarPubDOM = setupPanstarPublicFixture();
+const panstarPubRunner = createDOMFilterRunner(panstarPubDOM, true);
+
+it('Panstar 公开市场全真卡片智能打标：精准识别 IP reachability issue 阻断机 pub3 并赋予 xrvIpBlocked="1"', () => {
+  const cards = panstarPubRunner.getCards();
+  const cardPub3 = cards.find(c => c.id === 'panstar-pub-pub3');
+  assert.ok(cardPub3, '必须找到 pub3 卡片');
+  assert.strictEqual(cardPub3.dataset.xrvIpBlocked, '1', 'pub3 必须打标为被墙');
+  assert.strictEqual(cardPub3.classList.contains('xrv-card-blocked'), true);
+
+  const normalCards = cards.filter(c => c.id !== 'panstar-pub-pub3');
+  normalCards.forEach(c => assert.strictEqual(c.dataset.xrvIpBlocked, '0', `${c.id} 必须判定为正常`));
+});
+
+it('Panstar 公开市场排序矩阵：🔥 折扣最大 (discountRateDesc) 模式下 78.6% 折扣神机置顶且被墙机绝对沉底', () => {
+  const cards = panstarPubRunner.getCards();
+  const sorted = [...cards].sort((a, b) => getCardSortScore(a, 'discountRateDesc') - getCardSortScore(b, 'discountRateDesc'));
+  assert.strictEqual(sorted[0].id, 'panstar-pub-pub2', 'pub2 (78.57% 折扣) 必须置顶');
+  assert.strictEqual(sorted[sorted.length - 1].id, 'panstar-pub-pub3', '被墙机器 pub3 必须绝对沉底');
+});
+
+it('Panstar 公开市场排序矩阵：👑 月均续费最低 (monthlyRenewAsc) 模式下 $2/mo 绝版年付神机置顶且被墙机绝对沉底', () => {
+  const cards = panstarPubRunner.getCards();
+  const sorted = [...cards].sort((a, b) => getCardSortScore(a, 'monthlyRenewAsc') - getCardSortScore(b, 'monthlyRenewAsc'));
+  assert.strictEqual(sorted[0].id, 'panstar-pub-pub4', 'pub4 ($2/mo 年付折算) 必须置顶');
+  assert.strictEqual(sorted[sorted.length - 1].id, 'panstar-pub-pub3', '被墙机器 pub3 必须绝对沉底');
+});
+
+it('Panstar 公开市场排序矩阵：🎁 倒贴最多 (discountDesc) 模式下净让利最多机器置顶且被墙机绝对沉底', () => {
+  const cards = panstarPubRunner.getCards();
+  const sorted = [...cards].sort((a, b) => getCardSortScore(a, 'discountDesc') - getCardSortScore(b, 'discountDesc'));
+  assert.strictEqual(sorted[0].id, 'panstar-pub-pub5', 'pub5 (净倒贴 28.50) 必须置顶');
+  assert.strictEqual(sorted[sorted.length - 1].id, 'panstar-pub-pub3', '被墙机器 pub3 必须绝对沉底');
+});
+
+it('Panstar 公开市场排序矩阵：📶 剩余流量最多 (trafficDesc) 模式下 99.98% 可用神机置顶且被墙机绝对沉底', () => {
+  const cards = panstarPubRunner.getCards();
+  const sorted = [...cards].sort((a, b) => getCardSortScore(a, 'trafficDesc') - getCardSortScore(b, 'trafficDesc'));
+  assert.strictEqual(sorted[0].id, 'panstar-pub-pub6', 'pub6 (99.98% 流量) 必须置顶');
+  assert.strictEqual(sorted[sorted.length - 1].id, 'panstar-pub-pub3', '被墙机器 pub3 必须绝对沉底');
+});
+
+it('Panstar 公开市场排序矩阵：⏱ 日均成本最低 (costDailyAsc) 模式下低成本机置顶且过期机与被墙机安全沉底', () => {
+  const cards = panstarPubRunner.getCards();
+  const sorted = [...cards].sort((a, b) => getCardSortScore(a, 'costDailyAsc') - getCardSortScore(b, 'costDailyAsc'));
+  assert.strictEqual(sorted[0].id, 'panstar-pub-pub2', 'pub2 ($0.214/天) 必须置顶');
+  const bottomTwo = sorted.slice(-2).map(c => c.id);
+  assert.ok(bottomTwo.includes('panstar-pub-pub7'), '过期机 pub7 必须在末尾沉底');
+  assert.ok(bottomTwo.includes('panstar-pub-pub3'), '被墙机 pub3 必须在末尾沉底');
+});
+
+it('Panstar 公开市场 1 亿权重 IP 状态惩罚绝对沉底：💰 售价最低 (priceAsc) 模式下被墙机器绝对沉底', () => {
+  const cards = panstarPubRunner.getCards();
+  const sorted = [...cards].sort((a, b) => getCardSortScore(a, 'priceAsc') - getCardSortScore(b, 'priceAsc'));
+  assert.strictEqual(sorted[sorted.length - 1].id, 'panstar-pub-pub3', '被墙卡片 pub3 无论标价多低均必须末位绝对沉底');
+  assert.strictEqual(sorted[0].id, 'panstar-pub-pub7', '最低正常售价卡片置顶');
+});
+
+it('Panstar 公开市场 6 种排序模式产生相互独立、不可混淆的卡片顺序（彻底解决无变化 Bug）', () => {
+  const cards = panstarPubRunner.getCards();
+  const modes = ['discountDesc', 'discountRateDesc', 'priceAsc', 'monthlyRenewAsc', 'costDailyAsc', 'trafficDesc'];
+  const signatures = new Set();
+  modes.forEach((mode) => {
+    const sorted = [...cards].sort((a, b) => getCardSortScore(a, mode) - getCardSortScore(b, mode));
+    const sig = sorted.map(c => c.id).join(',');
+    assert.strictEqual(signatures.has(sig), false, `模式 ${mode} 不得与其他模式序列冲突`);
+    signatures.add(sig);
+  });
+  assert.strictEqual(signatures.size, 6, '全部 6 种排序模式必须产生 6 种完全不同的序列');
+});
+
+it('Panstar 公开市场 勾选「隐藏被墙IP」：被墙卡片被彻底隐藏且具备 style.display="none !important"', () => {
+  panstarPubRunner.filterState.hideBlocked = true;
+  panstarPubRunner.applyFilters();
+
+  const hiddenCards = panstarPubRunner.getUnits().filter(u => u.classList.contains('xrv-filter-hidden'));
+  assert.strictEqual(hiddenCards.length, 1);
+  assert.strictEqual(hiddenCards[0].id, 'panstar-pub-pub3');
+  assert.strictEqual(hiddenCards[0].style.display, 'none');
+  assert.strictEqual(hiddenCards[0].style._priorities['display'], 'important');
+
+  const visibleCards = panstarPubRunner.getUnits().filter(u => !u.classList.contains('xrv-filter-hidden'));
+  assert.strictEqual(visibleCards.length, 6);
+  assert.strictEqual(panstarPubRunner.stats.blocked, 0);
+});
+
+it('Panstar 公开市场 反选取消勾选「隐藏被墙IP」：全数恢复且清除行内 display 样式', () => {
+  panstarPubRunner.filterState.hideBlocked = false;
+  panstarPubRunner.applyFilters();
+
+  const cardPub3 = panstarPubRunner.getUnits().find(u => u.id === 'panstar-pub-pub3');
+  assert.strictEqual(cardPub3.classList.contains('xrv-filter-hidden'), false);
+  assert.strictEqual(cardPub3.style.display, undefined);
+
+  const visibleCards = panstarPubRunner.getUnits().filter(u => !u.classList.contains('xrv-filter-hidden'));
+  assert.strictEqual(visibleCards.length, 7);
+  assert.strictEqual(panstarPubRunner.stats.blocked, 1);
+});
+
+it('Panstar 公开市场 周期分类与多条件复合筛选：年付(year)筛选仅剩 1 张神机，月付+隐藏被墙仅剩 5 张', () => {
+  panstarPubRunner.filterState.cycle = 'year';
+  panstarPubRunner.applyFilters();
+
+  const yearCards = panstarPubRunner.getUnits().filter(u => !u.classList.contains('xrv-filter-hidden'));
+  assert.strictEqual(yearCards.length, 1);
+  assert.strictEqual(yearCards[0].id, 'panstar-pub-pub4');
+
+  // 月付 + 隐藏被墙
+  panstarPubRunner.filterState.cycle = 'month';
+  panstarPubRunner.filterState.hideBlocked = true;
+  panstarPubRunner.applyFilters();
+
+  const monthUnblocked = panstarPubRunner.getUnits().filter(u => !u.classList.contains('xrv-filter-hidden'));
+  assert.strictEqual(monthUnblocked.length, 5);
+  assert.strictEqual(panstarPubRunner.stats.blocked, 0);
+
+  // 恢复
+  panstarPubRunner.filterState.cycle = 'all';
+  panstarPubRunner.filterState.hideBlocked = false;
+  panstarPubRunner.applyFilters();
 });
 
 console.log('\n================================================================');

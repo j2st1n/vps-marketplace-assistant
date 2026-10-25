@@ -3,7 +3,7 @@
 [![Version](https://img.shields.io/badge/version-0.5.0-blue.svg)](https://github.com/j2st1n/vps-marketplace-assistant)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 [![Platform](https://img.shields.io/badge/platform-Tampermonkey%20%7C%20Violentmonkey%20%7C%20ScriptCat-orange.svg)]()
-[![Tests](https://img.shields.io/badge/tests-73%20passed-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/tests-92%20passed-brightgreen.svg)]()
 
 一套专为 **Panstar** (`panstar.hk`)、**Akile** (`akile.io`) 与 **Isvoro** (`isvoro.com`) 主流 VPS 二手流转交易市场量身打造的三合一高性能浏览器用户脚本。
 
@@ -103,7 +103,7 @@
 
 ## 🔬 自动化回归测试套件
 
-本项目配备严密的端到端自动化回归与边界测试套件（覆盖 13 阶段、73 项全量测试断言）：
+本项目配备严密的端到端自动化回归与边界测试套件（覆盖 14 阶段、92 项全量测试断言）：
 
 ```bash
 node test-regression.js
@@ -119,11 +119,19 @@ node test-regression.js
 7. IP 状态探测流水线与三级降级；
 8. IP 判定与防误判清洗矩阵（排除防火墙、锁价、未阻断等干扰）；
 9. 双重级联隐藏防御机制；
-10. Akile / Panstar / Isvoro 全真 DOM 交互、排序与筛选验证。
+10. Akile / Panstar / Isvoro 全真 DOM 交互、排序与筛选验证；
+11. Panstar 公开市场与控制台双模路由识别、无类名 `<dl><dt><dd>` 规格解析与 IP 阻断识别。
 
 ---
 
 ## 📋 更新日志
+
+### v0.5.1
+- **Panstar 公共市场双模全面适配**：
+  - **路由守卫放行**：放行条件扩展为 `path.startsWith('/console/marketplace') || path.startsWith('/marketplace')`，补齐 `@match *://*.panstar.hk/*` 与 `*://*.panstar.ai/*` 元数据；
+  - **规格列表兼容提取**：`findField` 支持 `.console-marketplace-spec-row, dl > div, dl > div.grid` 与全卡片语义回退，彻底解决非控制台公开市场模式下无类名 `<dt><dd>` 解析失败问题；
+  - **IP 状态探测与沉底增强**：网格选择器扩充 `.marketplace-public-grid`，状态选择器支持 `.console-marketplace-action-small`，阻断正则扩充 `reachability issue` 与 `疑似受限` 关键词；
+  - **沙盒与测试升级**：`mock-marketplace.html` 增加 Panstar 控制台与公开市场双模切换仿真示例，`test-regression.js` 新增阶段 14 专有测试套件，断言增至 92 项且 100% 通过。
 
 ### v0.5.0
 - **全量合并 Isvoro 市场支持**：
