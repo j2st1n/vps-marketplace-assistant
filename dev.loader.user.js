@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         [DEV] VPS 交易所助手 (本地实时热加载)
 // @namespace    https://github.com/j2st1n/vps-marketplace-assistant
-// @version      0.5.1-dev
+// @version      0.5.2-dev
 // @description  本地开发调试加载器：页面加载时自动从本地 127.0.0.1:8788 拉取最新源码并执行，无需手动反复更新安装
 // @author       j2st1n
 // @match        *://console.panstar.hk/*

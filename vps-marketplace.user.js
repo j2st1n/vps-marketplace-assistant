@@ -2,7 +2,7 @@
 // @name         VPS 交易所助手
 // @name:en      VPS Marketplace Assistant
 // @namespace    https://github.com/j2st1n/vps-marketplace-assistant
-// @version      0.5.1
+// @version      0.5.2
 // @description  为 Panstar、Akile 与 Isvoro 交易所量身打造：自动计算真实剩余价值、折溢价额、实际折数、接手日均成本与归一化月均续费成本；提供 6 维科学排序矩阵、智能多维筛选与明暗双模自适应。
 // @description:en  Tailor-made for Panstar, Akile and Isvoro marketplaces: automatically calculates true remaining value, discount/premium, daily cost, normalized monthly renewal; provides 6D scientific sorting matrix, multi-filter and dual-mode dark theme.
 // @author       j2st1n
@@ -46,6 +46,7 @@
 //  适配 Shadcn-Vue 规格定义列表 <dl> 拓扑、Vue 3 骨架屏自愈机制与 Tailwind HSL 暗黑模式变量。
 //  v0.5.1 完美适配 Panstar 公开市场（/marketplace）与控制台双模架构：
 //  放行公开市场路由、语义级提取 <dl><dt><dd> 规格行、增强链路受限探测与防误杀清洗。
+//  v0.5.2 优化卡片指标与排序文案：将副标题小字规范为“剩余价值”与“持有日均”，排序按钮对应优化为“⏱ 持有日均最低”，消除歧义并直观表达买家每日实际成本。
 //  依 MIT 许可开源发布。
 // ─────────────────────────────────────────────────────────────
 
@@ -1443,7 +1444,7 @@
       const displayDaily = Number.isFinite(dailyCost) ? dailyCost : (salePrice || 0);
       const detailText = salePrice === null
         ? `${isZh() ? '按' : 'Based on'} ${fmtMoney(result.price, cur)}/${result.unit} ${isZh() ? '计算' : ''}`
-        : `${isZh() ? '售价' : 'Sale'} ${fmtMoney(salePrice, cur)}；${isZh() ? '价值' : 'Value'} ${fmtMoney(val, cur)}；${isZh() ? '日均' : 'Daily'} ${fmtMoney(displayDaily, cur)}/${isZh() ? '天' : 'd'}`;
+        : `${isZh() ? '售价' : 'Sale'} ${fmtMoney(salePrice, cur)}；${isZh() ? '剩余价值' : 'Rem. Value'} ${fmtMoney(val, cur)}；${isZh() ? '持有日均' : 'Daily Cost'} ${fmtMoney(displayDaily, cur)}/${isZh() ? '天' : 'd'}`;
 
       wrapper.innerHTML = `
         <span class="xrv-label">${label}</span>
@@ -1518,7 +1519,7 @@
     discountRateDesc: { zh: '🔥 折扣最大', en: 'Deepest Discount' },
     priceAsc: { zh: '💰 售价最低', en: 'Lowest Price' },
     monthlyRenewAsc: { zh: '👑 月均续费最低', en: 'Lowest Monthly' },
-    costDailyAsc: { zh: '⏱ 日均成本最低', en: 'Daily Cost ↑' },
+    costDailyAsc: { zh: '⏱ 持有日均最低', en: 'Daily Cost ↑' },
     trafficDesc: { zh: '📶 剩余流量最多', en: 'Traffic Left ↓' },
   };
   let currentSort = 'default';
@@ -1744,7 +1745,7 @@
           <div class="xrv-hud-brand">
             <span class="xrv-hud-logo">⚡</span>
             <span class="xrv-hud-title">${zh ? 'VPS 交易所助手' : 'VPS Marketplace Assistant'}</span>
-            <span class="xrv-hud-ver">v0.5.1</span>
+            <span class="xrv-hud-ver">v0.5.2</span>
           </div>
           <div class="xrv-hud-stats" id="xrv-stats-container">
             ${zh ? '共' : 'Total'} <b id="xrv-stat-total">0</b> ${zh ? '台' : ''} (<span class="xrv-text-green">${zh ? 'IP正常' : 'Normal IP'} <b id="xrv-stat-normal">0</b></span> / <span class="xrv-text-red">${zh ? '被墙' : 'Blocked'} <b id="xrv-stat-blocked">0</b></span>) · <span class="xrv-text-gold">${zh ? '折价捡漏' : 'Deals'} <b id="xrv-stat-discount">0</b> ${zh ? '台' : ''}</span>

@@ -1,6 +1,6 @@
 # 《VPS 交易所助手》(VPS Marketplace Assistant)
 
-[![Version](https://img.shields.io/badge/version-0.5.1-blue.svg)](https://github.com/j2st1n/vps-marketplace-assistant)
+[![Version](https://img.shields.io/badge/version-0.5.2-blue.svg)](https://github.com/j2st1n/vps-marketplace-assistant)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 [![Platform](https://img.shields.io/badge/platform-Tampermonkey%20%7C%20Violentmonkey%20%7C%20ScriptCat-orange.svg)]()
 [![Tests](https://img.shields.io/badge/tests-92%20passed-brightgreen.svg)]()
@@ -125,6 +125,10 @@ node test-regression.js
 ---
 
 ## 📋 更新日志
+
+### v0.5.2
+- **卡片指标与排序文案优化**：将卡片底部辅助数据说明规范修改为“**剩余价值**”与“**持有日均**”（英文同步为 `Rem. Value` 与 `Daily Cost`），排序按钮对应优化为“⏱ 持有日均最低”，消除与机器原价或历史日均的歧义，直观呈现买家接盘每日真实成本；
+- **版本对齐**：全工程各层级版本标识统一递增至 `v0.5.2`。
 
 ### v0.5.1
 - **Panstar 公共市场双模全面适配**：
