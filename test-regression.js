@@ -19,7 +19,7 @@ const fs = require('fs');
 const path = require('path');
 
 console.log('================================================================');
-console.log('🧪 开始执行 VPS 交易所助手 v0.5.0 三站点全量回归测试套件 (Panstar / Akile / Isvoro)');
+console.log('🧪 开始执行 VPS 交易所助手 v0.5.1 三站点全量回归测试套件 (Panstar / Akile / Isvoro)');
 console.log('================================================================\n');
 
 // 1. 读取源码并提取被测核心逻辑
@@ -855,9 +855,9 @@ it('mock-marketplace.html 包含尾部 load-more 组件并受置底防守保护'
 // ─── 第六部分：暗色模式架构与 Design Tokens 规范审查 ───
 console.log('\n📌 阶段 6：暗色模式架构与 Design Tokens 规范静态审查');
 
-it('版本号审查：脚本元数据与 HUD 必须统一升级至 v0.5.0', () => {
-  assert.ok(source.includes('@version      0.5.0') || source.includes('@version      0.4.4'), 'UserScript header 必须标注版本');
-  assert.ok(source.includes('class="xrv-hud-ver">v0.5.0<') || source.includes('class="xrv-hud-ver">v0.4.4<'), 'HUD 徽章必须显示版本');
+it('版本号审查：脚本元数据与 HUD 必须统一升级至最新版本 (v0.5.1)', () => {
+  assert.ok(source.includes('@version      0.5.1') || source.includes('@version      0.5.0'), 'UserScript header 必须标注版本');
+  assert.ok(source.includes('class="xrv-hud-ver">v0.5.1<') || source.includes('class="xrv-hud-ver">v0.5.0<'), 'HUD 徽章必须显示版本');
   assert.ok(source.includes('VPS 交易所助手') || source.includes('交易所剩余价值助手'), 'HUD 标题必须包含“VPS 交易所助手”');
 });
 

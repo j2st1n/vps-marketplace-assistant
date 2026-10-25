@@ -1,6 +1,6 @@
 # 《VPS 交易所助手》(VPS Marketplace Assistant)
 
-[![Version](https://img.shields.io/badge/version-0.5.0-blue.svg)](https://github.com/j2st1n/vps-marketplace-assistant)
+[![Version](https://img.shields.io/badge/version-0.5.1-blue.svg)](https://github.com/j2st1n/vps-marketplace-assistant)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 [![Platform](https://img.shields.io/badge/platform-Tampermonkey%20%7C%20Violentmonkey%20%7C%20ScriptCat-orange.svg)]()
 [![Tests](https://img.shields.io/badge/tests-92%20passed-brightgreen.svg)]()
